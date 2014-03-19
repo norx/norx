@@ -12,7 +12,7 @@
 */
 #include <stdio.h>
 
-#include "defs.h" /* load64, store64 */
+#include "norx_util.h" /* load64, store64 */
 
 int crypto_aead_encrypt(
     unsigned char *c, unsigned long long *clen,

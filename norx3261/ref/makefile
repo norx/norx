@@ -18,6 +18,6 @@ genkat:
 	rm genkat
 
 testvector:
-	@$(CC) $(CFLAGS) -DNORX_DEBUG -I. -o testvector ../../check/testvector64.c caesar.c norx.c
+	@$(CC) $(CFLAGS) -DNORX_DEBUG -I. -o testvector ../../check/testvector32.c caesar.c norx.c
 	@./testvector
 	@rm testvector
