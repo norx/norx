@@ -78,7 +78,6 @@ fail:
 
 int main()
 {
-    check(kat);
-    return 0;
+    return check(kat);
 }
 
