@@ -536,7 +536,6 @@ void norx_encrypt_msg(norx_state_t state, unsigned char *out, const unsigned cha
         /* last block, 0 < inlen < BYTES(RATE) */
         if(inlen > 0)
         {
-            uint8_t lastblock[BYTES(RATE)];
             /* branch */
             memcpy(state2, state, sizeof(norx_state_t));
             norx_branch(state2, lane++);
