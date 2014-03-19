@@ -119,7 +119,7 @@ void bench()
 #define BENCH_TRIALS     32
 #define BENCH_MAXLEN   1536
   static unsigned char  in[4096];
-  static unsigned char out[4096];
+  static unsigned char out[4096+32];
   static unsigned char  ad[4096];
   static unsigned char   n[32];
   static unsigned char   k[32];
