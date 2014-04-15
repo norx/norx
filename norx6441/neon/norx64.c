@@ -239,7 +239,7 @@ do                                                                             \
     STOREU(lastblock +  32, B0);                                               \
     STOREU(lastblock +  48, B1);                                               \
     STOREU(lastblock +  64, C0);                                               \
-    block_copy(lastblock, IN, INLEN);                                          \
+    memcpy(lastblock, IN, INLEN);                                              \
     lastblock[clen] ^= 0x01;                                                   \
     lastblock[80-1] ^= 0x80;                                                   \
     W0 = LOADU(lastblock +  0); STOREU(lastblock +  0, XOR(A0, W0)); A0 = W0;  \
@@ -247,7 +247,7 @@ do                                                                             \
     W2 = LOADU(lastblock + 32); STOREU(lastblock + 32, XOR(B0, W2)); B0 = W2;  \
     W3 = LOADU(lastblock + 48); STOREU(lastblock + 48, XOR(B1, W3)); B1 = W3;  \
     W4 = LOADU(lastblock + 64); STOREU(lastblock + 64, XOR(C0, W4)); C0 = W4;  \
-    block_copy(OUT, lastblock, INLEN);                                         \
+    memcpy(OUT, lastblock, INLEN);                                             \
 } while(0)
 
 #define INITIALIZE(A0, A1, B0, B1, C0, C1, D0, D1, N, K0, K1)                \
@@ -277,59 +277,15 @@ do                                                                     \
 do                                      \
 {                                       \
     memset(BLOCK, 0, BLOCKLEN);         \
-    block_copy(BLOCK, IN, INLEN);       \
+    memcpy(BLOCK, IN, INLEN);           \
     BLOCK[INLEN] = 0x01;                \
     BLOCK[BLOCKLEN - 1] |= 0x80;        \
 } while(0)
 
-/* inlen <= 80 */
-static void block_copy(unsigned char *out, const unsigned char *in, const size_t inlen)
-{
-    if( inlen & 64 )
-    {
-        STOREU(out +  0, LOADU(in +  0));
-        STOREU(out + 16, LOADU(in + 16));
-        STOREU(out + 32, LOADU(in + 32));
-        STOREU(out + 48, LOADU(in + 48));
-        in += 64; out += 64;
-    }
-    if( inlen & 32 )
-    {
-        STOREU(out +  0, LOADU(in +  0));
-        STOREU(out + 16, LOADU(in + 16));
-        in += 32; out += 32;
-    }
-    if( inlen & 16 )
-    {
-        STOREU(out +  0, LOADU(in +  0));
-        in += 16; out += 16;
-    }
-    if( inlen & 8 )
-    {
-        memcpy(out, in, 8);
-        in += 8; out += 8;
-    }
-    if( inlen & 4 )
-    {
-        memcpy(out, in, 4);
-        in += 4; out += 4;
-    }
-    if( inlen & 2 )
-    {
-        memcpy(out, in, 2);
-        in += 2; out += 2;
-    }
-    if( inlen & 1 )
-    {
-        memcpy(out, in, 1);
-        in += 1; out += 1;
-    }
-}
-
 int crypto_aead_encrypt(
     unsigned char *c, unsigned long long *clen,
-    const unsigned char *m, unsigned long long mlen,
-    const unsigned char *ad, unsigned long long adlen,
+    const unsigned char *m, unsigned long long mlen_,
+    const unsigned char *ad, unsigned long long adlen_,
     const unsigned char *nsec,
     const unsigned char *npub,
     const unsigned char *k
@@ -340,6 +296,8 @@ int crypto_aead_encrypt(
     const uint64x2_t N  = LOADU(npub);
     const uint64x2_t K0 = LOADU(k +  0);
     const uint64x2_t K1 = LOADU(k + 16);
+    size_t mlen = mlen_;
+    size_t adlen = adlen_;
 
     *clen = mlen + NORX_A/8;
 
@@ -369,7 +327,7 @@ int crypto_aead_encrypt(
         /* Handle last block */
         PAD(lastblock, sizeof lastblock, m, mlen);
         ENCRYPT_BLOCK(A0, A1, B0, B1, C0, C1, D0, D1, lastblock, lastblock);
-        block_copy(c, lastblock, mlen);
+        memcpy(c, lastblock, mlen);
         c += mlen;
     }
 
@@ -386,18 +344,20 @@ int crypto_aead_encrypt(
 int crypto_aead_decrypt(
     unsigned char *m, unsigned long long *mlen,
     unsigned char *nsec,
-    const unsigned char *c, unsigned long long clen,
-    const unsigned char *ad, unsigned long long adlen,
+    const unsigned char *c, unsigned long long clen_,
+    const unsigned char *ad, unsigned long long adlen_,
     const unsigned char *npub,
     const unsigned char *k
     )
 {
-    ALIGN(64) unsigned char lastblock[80];
+    ALIGN(32) unsigned char lastblock[80];
     uint64x2_t A0, A1, B0, B1, C0, C1, D0, D1;
     const uint64x2_t N  = LOADU(npub);
     const uint64x2_t K0 = LOADU(k +  0);
     const uint64x2_t K1 = LOADU(k + 16);
     uint32x4_t T0, T1;
+    size_t clen = clen_;
+    size_t adlen = adlen_;
 
     if(clen < NORX_A/8)
         return -1;
