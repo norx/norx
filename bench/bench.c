@@ -110,7 +110,10 @@ static unsigned long long cpucycles(void)
 static mach_timebase_info_data_t sTimebaseInfo;
 static unsigned long long cpucycles( void )
 {
-    return mach_absolute_time() * (double)GHZ;
+    if ( sTimebaseInfo.denom == 0 ) {
+        (void) mach_timebase_info(&sTimebaseInfo);
+    }
+    return ( ( ( double )sTimebaseInfo.numer / ( double )sTimebaseInfo.denom ) * GHZ ) * mach_absolute_time();
 }
 #else
 #error "Don't know how to count cycles!"
@@ -153,16 +156,9 @@ void bench()
       crypto_aead_encrypt(out, &outlen, in, j, ad, adlen, NULL, n, k);
     }
 
-#if TARGET_OS_IPHONE
-    if ( sTimebaseInfo.denom == 0 ) {
-        (void) mach_timebase_info(&sTimebaseInfo);
-    }
-    for( i = 0; i < BENCH_TRIALS; ++i )
-        cycles[i] = (double)(cycles[i + 1] - cycles[i]) * sTimebaseInfo.numer / sTimebaseInfo.denom;
-#else
     for( i = 0; i < BENCH_TRIALS; ++i )
       cycles[i] = cycles[i + 1] - cycles[i];
-#endif
+
     qsort( cycles, BENCH_TRIALS, sizeof( uint64_t ), bench_cmp );
     median[j] = cycles[BENCH_TRIALS / 2];
   }
