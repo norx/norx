@@ -440,7 +440,7 @@ int crypto_aead_decrypt(
     /* Finalize, and output tag */
     FINALIZE(A0, A1, B0, B1, C0, C1, D0, D1);
 
-    
+
     /* Verify tag */
     T0 = vceqq_u32(U64TOU32(A0), U8TOU32( vld1q_u8((uint8_t *)(c +  0)) ));
     T1 = vceqq_u32(U64TOU32(A1), U8TOU32( vld1q_u8((uint8_t *)(c + 16)) ));

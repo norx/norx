@@ -66,7 +66,6 @@ static unsigned long long cpucycles( void )
   return result;
 }
 #elif defined(__arm__)
-
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
@@ -100,6 +99,19 @@ static unsigned long long cpucycles(void)
   }
   return result;
 }
+#elif TARGET_OS_IPHONE
+#include <mach/mach_time.h>
+#if 1
+#define GHZ 1.4 // iPad Air
+#endif
+#if 0
+#define GHZ 1.3 // iPhone 5s & iPad Mini Retina
+#endif
+static mach_timebase_info_data_t sTimebaseInfo;
+static unsigned long long cpucycles( void )
+{
+    return mach_absolute_time() * (double)GHZ;
+}
 #else
 #error "Don't know how to count cycles!"
 #endif
@@ -130,7 +142,7 @@ void bench()
 
   printf( "#bytes  median  per byte\n" );
 
-  /* 1 ... BENCH_MAXLEN */
+  // 1 ... BENCH_MAXLEN
   for( j = 0; j <= 4096; ++j )
   {
     uint64_t cycles[BENCH_TRIALS + 1];
@@ -141,9 +153,16 @@ void bench()
       crypto_aead_encrypt(out, &outlen, in, j, ad, adlen, NULL, n, k);
     }
 
+#if TARGET_OS_IPHONE
+    if ( sTimebaseInfo.denom == 0 ) {
+        (void) mach_timebase_info(&sTimebaseInfo);
+    }
+    for( i = 0; i < BENCH_TRIALS; ++i )
+        cycles[i] = (double)(cycles[i + 1] - cycles[i]) * sTimebaseInfo.numer / sTimebaseInfo.denom;
+#else
     for( i = 0; i < BENCH_TRIALS; ++i )
       cycles[i] = cycles[i + 1] - cycles[i];
-
+#endif
     qsort( cycles, BENCH_TRIALS, sizeof( uint64_t ), bench_cmp );
     median[j] = cycles[BENCH_TRIALS / 2];
   }
