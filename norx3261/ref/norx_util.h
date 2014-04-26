@@ -30,18 +30,7 @@
 #include <limits.h>
 #include <stddef.h>
 #include <string.h>
-#if defined(SUPERCOP)
-  #include "crypto_uint64.h"
-  #include "crypto_uint32.h"
-  #include "crypto_uint16.h"
-  #include  "crypto_uint8.h"
-  typedef crypto_uint64 uint64_t;
-  typedef crypto_uint32 uint32_t;
-  typedef crypto_uint16 uint16_t;
-  typedef  crypto_uint8  uint8_t;
-#else
-  #include <stdint.h>
-#endif
+#include <stdint.h>
 
 #define STR_(x) #x
 #define STR(x) STR_(x)
