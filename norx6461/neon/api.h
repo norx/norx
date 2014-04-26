@@ -11,6 +11,6 @@
    this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 */
 #define CRYPTO_KEYBYTES 32
-#define CRYPTO_NPRIVBYTES 0
+#define CRYPTO_NSECBYTES 0
 #define CRYPTO_NPUBBYTES  16
 #define CRYPTO_ABYTES 32
