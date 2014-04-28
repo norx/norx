@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# NORX reference source code package - wrap up reference implementation for SUPERCOP
+# NORX reference source code package - script to wrap up implementations for SUPERCOP
 #
 # Written in 2014 by Philipp Jovanovic <jovanovic@fim.uni-passau.de>
 #
@@ -11,17 +11,21 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-AEAD=crypto_aead
-TYPE=ref
+DEST=crypto_aead
 VER=v1
 
-if [ -d "$AEAD" ]; then rm -rf $AEAD; fi
+if [ -d "$DEST" ]; then rm -rf $DEST; fi
+mkdir -p $DEST
 
 for DIR in ../norx*; do
-  SRC=$DIR/$TYPE
-  DEST=$AEAD/$(basename $DIR)$VER/$TYPE
-  mkdir -p $DEST
-  cp $SRC/{api.h,norx*} $DEST
-  sed -e 's/defined(SUPERCOP)/1/g' $SRC/caesar.c > $DEST/encrypt.c
+  SRC=$DIR
+  BASE=$(basename $DIR)
+  rsync -a $SRC $DEST --exclude={makefile,kat.h}
+  mv $DEST/$BASE $DEST/$BASE$VER
 done;
-tar -czf $AEAD.tar.gz $AEAD
+
+if [ `uname` == "Darwin" ]; then
+  find $DEST -type f -exec sed -i "" -e 's/defined(SUPERCOP)/1/g' '{}' \;
+else
+  find $DEST -type f -exec sed -i 's/defined(SUPERCOP)/1/g' '{}' \;
+fi
