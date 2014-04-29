@@ -102,10 +102,10 @@ static unsigned long long cpucycles(void)
 #elif TARGET_OS_IPHONE
 #include <mach/mach_time.h>
 #if 1
-#define GHZ 1.4 // iPad Air
+#define GHZ 1.4 /* iPad Air */
 #endif
 #if 0
-#define GHZ 1.3 // iPhone 5s & iPad Mini Retina
+#define GHZ 1.3 /* iPhone 5s & iPad Mini Retina */
 #endif
 static mach_timebase_info_data_t sTimebaseInfo;
 static unsigned long long cpucycles( void )
@@ -145,7 +145,7 @@ void bench()
 
   printf( "#bytes  median  per byte\n" );
 
-  // 1 ... BENCH_MAXLEN
+  /* 1 ... BENCH_MAXLEN */
   for( j = 0; j <= 4096; ++j )
   {
     uint64_t cycles[BENCH_TRIALS + 1];
