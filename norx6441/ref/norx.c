@@ -287,6 +287,9 @@ static NORX_INLINE void norx_decrypt_lastblock(norx_state_t state, uint8_t *out,
     uint8_t lastblock[BYTES(RATE)];
     size_t i;
 
+    norx_inject_tag(state, PAYLOAD_TAG);
+    norx_permutation(state);
+
     for(i = 0; i < WORDS(RATE); ++i)
         STORE(lastblock + i * BYTES(NORX_W), S[i]);
 
@@ -294,7 +297,13 @@ static NORX_INLINE void norx_decrypt_lastblock(norx_state_t state, uint8_t *out,
     lastblock[inlen] ^= 0x01;
     lastblock[BYTES(RATE) - 1] ^= 0x80;
 
-    norx_decrypt_block(state, lastblock, lastblock);
+    for (i = 0; i < WORDS(RATE); ++i)
+    {
+        const norx_word_t c = LOAD(lastblock + i * BYTES(NORX_W));
+        STORE(lastblock + i * BYTES(NORX_W), S[i] ^ c);
+        S[i] = c;
+    }
+    
     memcpy(out, lastblock, inlen);
     burn(lastblock, 0, sizeof lastblock);
 }
