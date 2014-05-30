@@ -284,35 +284,19 @@ static NORX_INLINE void norx_decrypt_block(norx_state_t state, uint8_t *out, con
 static NORX_INLINE void norx_decrypt_lastblock(norx_state_t state, uint8_t *out, const uint8_t * in, size_t inlen)
 {
     norx_word_t * S = state->S;
-    uint8_t b[BYTES(NORX_W)];
-    size_t i, j;
+    uint8_t lastblock[BYTES(RATE)];
+    size_t i;
 
-    norx_inject_tag(state, PAYLOAD_TAG);
-    norx_permutation(state);
+    for(i = 0; i < WORDS(RATE); ++i)
+        STORE(lastblock + i * BYTES(NORX_W), S[i]);
 
-    /* Undo padding */
-    S[inlen / BYTES(NORX_W)] ^= 0x01ULL << ((inlen % BYTES(NORX_W)) * 8);
-    S[WORDS(RATE) - 1]  ^= 0x80ULL << (((BYTES(RATE) - 1) % BYTES(NORX_W)) * 8);
+    memcpy(lastblock, in, inlen);
+    lastblock[inlen] ^= 0x01;
+    lastblock[BYTES(RATE) - 1] ^= 0x80;
 
-    for(i = 0; inlen >= BYTES(NORX_W); ++i)
-    {
-        norx_word_t c = LOAD(in);
-        STORE(out, S[i] ^ c);
-        S[i] = c;
-
-        inlen -= BYTES(NORX_W);
-        in    += BYTES(NORX_W);
-        out   += BYTES(NORX_W);
-    }
-
-    STORE(b, S[i]);
-    for(j = 0; j < inlen; ++j)
-    {
-        uint8_t c = in[j];
-        out[j] = b[j] ^ c;
-        b[j]   = c;
-    }
-    S[i] = LOAD(b);
+    norx_decrypt_block(state, lastblock, lastblock);
+    memcpy(out, lastblock, inlen);
+    burn(lastblock, 0, sizeof lastblock);
 }
 
 #if NORX_D != 1 /* only required in parallel modes */
@@ -545,6 +529,8 @@ void norx_encrypt_msg(norx_state_t state, unsigned char *out, const unsigned cha
             norx_merge(sum, state2);
         }
         memcpy(state, sum, sizeof(norx_state_t));
+        burn(state2, 0, sizeof(norx_state_t));
+        burn(sum, 0, sizeof(norx_state_t));
     }
 }
 
@@ -588,6 +574,8 @@ void norx_decrypt_msg(norx_state_t state, unsigned char *out, const unsigned cha
             norx_merge(sum, state2);
         }
         memcpy(state, sum, sizeof(norx_state_t));
+        burn(state2, 0, sizeof(norx_state_t));
+        burn(sum, 0, sizeof(norx_state_t));
     }
 }
 #else /* D < 0 */
