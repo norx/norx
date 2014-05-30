@@ -529,6 +529,8 @@ void norx_encrypt_msg(norx_state_t state, unsigned char *out, const unsigned cha
             norx_merge(sum, state2);
         }
         memcpy(state, sum, sizeof(norx_state_t));
+        burn(state2, 0, sizeof(norx_state_t));
+        burn(sum, 0, sizeof(norx_state_t));
     }
 }
 
@@ -572,6 +574,8 @@ void norx_decrypt_msg(norx_state_t state, unsigned char *out, const unsigned cha
             norx_merge(sum, state2);
         }
         memcpy(state, sum, sizeof(norx_state_t));
+        burn(state2, 0, sizeof(norx_state_t));
+        burn(sum, 0, sizeof(norx_state_t));
     }
 }
 #else /* D < 0 */
