@@ -245,8 +245,8 @@ do                                                                             \
     STOREU(lastblock +  48, B1);                                               \
     STOREU(lastblock +  64, C0);                                               \
     memcpy(lastblock, IN, INLEN);                                              \
-    lastblock[clen] ^= 0x01;                                                   \
-    lastblock[80-1] ^= 0x80;                                                   \
+    lastblock[INLEN] ^= 0x01;                                                  \
+    lastblock[80-1]  ^= 0x80;                                                  \
     W0 = LOADU(lastblock +  0); STOREU(lastblock +  0, XOR(A0, W0)); A0 = W0;  \
     W1 = LOADU(lastblock + 16); STOREU(lastblock + 16, XOR(A1, W1)); A1 = W1;  \
     W2 = LOADU(lastblock + 32); STOREU(lastblock + 32, XOR(B0, W2)); B0 = W2;  \
