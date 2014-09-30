@@ -74,10 +74,6 @@ typedef enum tag__
     :   /* else */  ROT_N(X, C) \
 )
 
-
-/* NORX64-specific constants */
-#define NORX_PARAMETER ((NORX_R << 26) | (NORX_D << 18) | (NORX_W << 10) | NORX_A)
-
 #define U0 0x243F6A8885A308D3ULL
 #define U1 0x13198A2E03707344ULL
 #define U2 0xA4093822299F31D0ULL
@@ -266,7 +262,8 @@ do                                                                           \
     C1 = vcombine_u64(vcreate_u64(U4), vcreate_u64(U5));                     \
     D0 = vcombine_u64(vcreate_u64(U6), vcreate_u64(U7));                     \
     D1 = vcombine_u64(vcreate_u64(U8), vcreate_u64(U9));                     \
-    D1 = XOR(D1, vcombine_u64(vcreate_u64(NORX_PARAMETER), vcreate_u64(0))); \
+    D0 = XOR(D0, vcombine_u64(vcreate_u64(NORX_W), vcreate_u64(NORX_R)));    \
+    D1 = XOR(D1, vcombine_u64(vcreate_u64(NORX_D), vcreate_u64(NORX_A)));    \
     PERMUTE(A0, A1, B0, B1, C0, C1, D0, D1);                                 \
 } while(0)
 
@@ -405,7 +402,7 @@ int crypto_aead_decrypt(
     /* Finalize, and output tag */
     FINALIZE(A0, A1, B0, B1, C0, C1, D0, D1);
 
-    
+
     /* Verify tag */
     T0 = vceqq_u32(U64TOU32(A0), U8TOU32( vld1q_u8((uint8_t *)(c +  0)) ));
     T1 = vceqq_u32(U64TOU32(A1), U8TOU32( vld1q_u8((uint8_t *)(c + 16)) ));

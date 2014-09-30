@@ -273,7 +273,7 @@ do                                                                          \
     B = K;                                                                  \
     C = _mm256_set_epi64x(U5, U4, U3, U2);                                  \
     D = _mm256_set_epi64x(U9, U8, U7, U6);                                  \
-    D = XOR(D, _mm256_set_epi64x(0, NORX_PARAMETER, 0, 0));                 \
+    D = XOR(D, _mm256_set_epi64x(NORX_A, NORX_D, NORX_R, NORX_W));          \
     PERMUTE(A, B, C, D);                                                    \
 } while(0)
 

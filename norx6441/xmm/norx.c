@@ -70,9 +70,6 @@ typedef enum tag__
 #define AND(A, B) _mm_and_si128((A), (B))
 #define ADD(A, B) _mm_add_epi64((A), (B))
 
-/* NORX64-specific constants */
-#define NORX_PARAMETER ((NORX_R << 26) | (NORX_D << 18) | (NORX_W << 10) | NORX_A)
-
 #define U0 0x243F6A8885A308D3ULL
 #define U1 0x13198A2E03707344ULL
 #define U2 0xA4093822299F31D0ULL
@@ -332,7 +329,8 @@ do                                                                          \
     C1 = _mm_set_epi64x(U5, U4);                                            \
     D0 = _mm_set_epi64x(U7, U6);                                            \
     D1 = _mm_set_epi64x(U9, U8);                                            \
-    D1 = XOR(D1, _mm_set_epi64x(0, NORX_PARAMETER));                        \
+    D0 = XOR(D0, _mm_set_epi64x(NORX_R, NORX_W));                           \
+    D1 = XOR(D1, _mm_set_epi64x(NORX_A, NORX_D));                           \
     PERMUTE(A0, A1, B0, B1, C0, C1, D0, D1);                                \
 } while(0)
 

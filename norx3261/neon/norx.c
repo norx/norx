@@ -64,9 +64,6 @@ typedef enum tag__
 #define BLEND(A, B) vcombine_u32(vget_low_u32(B), vget_high_u32(A))
 #define SETV(A0, A1, A2, A3) {A0, A1, A2, A3}
 
-/* NORX64-specific constants */
-#define NORX_PARAMETER ((NORX_R << 26) | (NORX_D << 18) | (NORX_W << 10) | NORX_A)
-
 #define U0 0x243F6A88
 #define U1 0x85A308D3
 #define U2 0x13198A2E
@@ -259,7 +256,7 @@ do                                                    \
     const uint32x4_t A_ = SETV(U0, N&0xFFFFFFFF, N >> 32, U1);       \
     const uint32x4_t C_ = SETV(U2, U3, U4, U5);           \
     const uint32x4_t D_ = SETV(U6, U7, U8, U9);           \
-    const uint32x4_t P_ = SETV(0, 0, NORX_PARAMETER, 0);  \
+    const uint32x4_t P_ = SETV(NORX_W, NORX_R, NORX_D, NORX_A);  \
     A = A_;                                           \
     B = K;                                            \
     C = C_;                                           \

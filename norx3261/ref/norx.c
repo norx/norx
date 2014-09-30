@@ -202,7 +202,10 @@ static NORX_INLINE void norx_inject_lane(norx_state_t state, uint64_t lane)
 static NORX_INLINE void norx_inject_params(norx_state_t state)
 {
     norx_word_t * S = state->S;
-    S[14] ^= (NORX_R << 26) | (NORX_D << 18) | (NORX_W << 10) | NORX_A;
+    S[12] ^= NORX_W;
+    S[13] ^= NORX_R;
+    S[14] ^= NORX_D;
+    S[15] ^= NORX_A;
     norx_permutation(state);
 }
 
@@ -303,7 +306,7 @@ static NORX_INLINE void norx_decrypt_lastblock(norx_state_t state, uint8_t *out,
         STORE(lastblock + i * BYTES(NORX_W), S[i] ^ c);
         S[i] = c;
     }
-    
+
     memcpy(out, lastblock, inlen);
     burn(lastblock, 0, sizeof lastblock);
 }
