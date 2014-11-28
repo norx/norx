@@ -387,22 +387,20 @@ void norx_encrypt_msg(norx_state_t state, unsigned char *out, const unsigned cha
         }
 
         /* parallel payload processing */
-        for(i = 0; i < NORX_D; ++i)
+        for(i = 0; inlen >= BYTES(RATE); ++i)
         {
-            const size_t stride = BYTES(RATE) * NORX_D;
-            size_t    offset = i * BYTES(RATE);
-            size_t lane_size = (inlen / stride) * BYTES(RATE) +
-                               (inlen % stride > offset
-                                ? MIN(inlen % stride - offset, BYTES(RATE))
-                                : 0);
+            norx_encrypt_block(lane[i%NORX_D], out, in);
+            inlen -= BYTES(RATE);
+            out   += BYTES(RATE);
+            in    += BYTES(RATE);
+        }
+        norx_encrypt_lastblock(lane[i++%NORX_D], out, in, inlen);
 
-            while(lane_size >= BYTES(RATE))
-            {
-                norx_encrypt_block(lane[i], out + offset, in + offset);
-                offset    += stride;
-                lane_size -= BYTES(RATE);
-            }
-            norx_encrypt_lastblock(lane[i], out + offset, in + offset, lane_size);
+        /* Pad remaining blocks */
+        norx_pad(emptyblock, emptyblock, 0);
+        for(j = 0; j < (NORX_D-1); ++j, ++i)
+        {
+            norx_absorb(lane[i%NORX_D], emptyblock, PAYLOAD_TAG);
         }
 
         /* Merge */

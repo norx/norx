@@ -32,8 +32,10 @@
 #include <string.h>
 #include <stdint.h>
 
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-#define MAX(x, y) ((x) < (y) ? (x) : (y))
+#define STR_(x) #x
+#define STR(x) STR_(x)
+#define PASTE_(A, B, C) A ## B ## C
+#define PASTE(A, B, C) PASTE_(A, B, C)
 #define BYTES(x) (((x) + 7) / 8)
 #define WORDS(x) (((x) + (NORX_W-1)) / NORX_W)
 
