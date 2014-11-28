@@ -22,8 +22,12 @@
 #include "norx_util.h"
 #include "norx.h"
 
+#if   NORX_W == 16
+    #define NORX_K (NORX_W *  6)   /* Key size */
+#else /* 32, 64 */
+    #define NORX_K (NORX_W *  4)   /* Key size */
+#endif
 #define NORX_N (NORX_W *  2)   /* Nonce size */
-#define NORX_K (NORX_W *  4)   /* Key size */
 #define NORX_B (NORX_W * 16)   /* Permutation width */
 #define NORX_C (NORX_W *  6)   /* Capacity */
 #define RATE (NORX_B - NORX_C) /* To avoid clashing with rounds... */
@@ -72,6 +76,28 @@
         #define NORX_FMT "08" PRIX32
     #endif
 
+#elif NORX_W == 16 /* NORX-16 specific */
+
+    #define LOAD load16
+    #define STORE store16
+
+    /* Rotation constants */
+    #define R0  8
+    #define R1 11
+    #define R2 12
+    #define R3 15
+
+    /* Initialization constants */
+    static const norx_word_t norx_ui[4] =
+    {
+       0x243F, 0x6A88,
+       0x85A3, 0x08D3
+    };
+
+    #if defined(NORX_DEBUG)
+        #define NORX_FMT "04" PRIX16
+    #endif
+
 #else
     #error "Invalid word size!"
 #endif
@@ -106,9 +132,9 @@ typedef enum tag__
 #define U(A, B) ( ( (A) ^ (B) ) ^ ( ( (A) & (B) ) << 1) )
 
 /* The quarter-round */
-#define G(A, B, C, D) \
-do \
-{ \
+#define G(A, B, C, D)                               \
+do                                                  \
+{                                                   \
     (A) = U(A, B); (D) ^= (A); (D) = ROTR((D), R0); \
     (C) = U(C, D); (B) ^= (C); (B) = ROTR((B), R1); \
     (A) = U(A, B); (D) ^= (A); (D) = ROTR((D), R2); \
@@ -154,18 +180,22 @@ static NORX_INLINE void norx_setup(norx_state_t state, const uint8_t *k, const u
     norx_word_t * S = state->S;
     norx_word_t u[4];
 
-    S[0] = u[0] = norx_ui[0];
+    memcpy(u, norx_ui, sizeof u);
+
+#if NORX_W == 32 || NORX_W == 64
+
+    S[0] = u[0];
     S[1] = LOAD(n + 0 * BYTES(NORX_W));
     S[2] = LOAD(n + 1 * BYTES(NORX_W));
-    S[3] = u[1] = norx_ui[1];
+    S[3] = u[1];
 
     S[4] = LOAD(k + 0 * BYTES(NORX_W));
     S[5] = LOAD(k + 1 * BYTES(NORX_W));
     S[6] = LOAD(k + 2 * BYTES(NORX_W));
     S[7] = LOAD(k + 3 * BYTES(NORX_W));
 
-    S[8] = u[2] = norx_ui[2];
-    S[9] = u[3] = norx_ui[3];
+    S[8] = u[2];
+    S[9] = u[3];
 
     G(u[0], u[1], u[2], u[3]);
 
@@ -178,6 +208,34 @@ static NORX_INLINE void norx_setup(norx_state_t state, const uint8_t *k, const u
 
     S[14] = u[0];
     S[15] = u[1];
+
+#elif NORX_W == 16
+
+    S[ 0] = LOAD(k + 0 * BYTES(NORX_W));
+    S[ 1] = LOAD(n + 0 * BYTES(NORX_W));
+    S[ 2] = LOAD(n + 1 * BYTES(NORX_W));
+    S[ 3] = LOAD(k + 1 * BYTES(NORX_W));
+
+    S[ 4] = LOAD(k + 2 * BYTES(NORX_W));
+    S[ 5] = LOAD(k + 3 * BYTES(NORX_W));
+    S[ 6] = LOAD(k + 4 * BYTES(NORX_W));
+    S[ 7] = LOAD(k + 5 * BYTES(NORX_W));
+
+    S[ 8] = u[0];
+    S[ 9] = u[1];
+    S[10] = u[2];
+    S[11] = u[3];
+
+    G(u[0], u[1], u[2], u[3]);
+
+    S[12] = u[0];
+    S[13] = u[1];
+    S[14] = u[2];
+    S[15] = u[3];
+
+#else
+    #error "Invalid word size!"
+#endif
 }
 
 static NORX_INLINE void norx_inject_tag(norx_state_t state, tag_t tag)
@@ -190,11 +248,15 @@ static NORX_INLINE void norx_inject_tag(norx_state_t state, tag_t tag)
 static NORX_INLINE void norx_inject_lane(norx_state_t state, uint64_t lane)
 {
     norx_word_t * S = state->S;
-#if   NORX_W == 32
+#if   NORX_W == 16
+    S[13] ^= (lane >>  0) & 0xFFFF;
+    S[14] ^= (lane >> 16) & 0xFFFF;
+#elif NORX_W == 32
     S[13] ^= (lane >>  0) & 0xFFFFFFFF;
     S[14] ^= (lane >> 32) & 0xFFFFFFFF;
 #elif NORX_W == 64
     S[13] ^= lane;
+    S[14] ^= 0; /* 128-bit lengths not implemented */
 #endif
 }
 #endif
@@ -387,22 +449,20 @@ void norx_encrypt_msg(norx_state_t state, unsigned char *out, const unsigned cha
         }
 
         /* parallel payload processing */
-        for(i = 0; i < NORX_D; ++i)
+        for(i = 0; inlen >= BYTES(RATE); ++i)
         {
-            const size_t stride = BYTES(RATE) * NORX_D;
-            size_t    offset = i * BYTES(RATE);
-            size_t lane_size = (inlen / stride) * BYTES(RATE) +
-                               (inlen % stride > offset
-                                ? MIN(inlen % stride - offset, BYTES(RATE))
-                                : 0);
+            norx_encrypt_block(lane[i%NORX_D], out, in);
+            inlen -= BYTES(RATE);
+            out   += BYTES(RATE);
+            in    += BYTES(RATE);
+        }
+        norx_encrypt_lastblock(lane[i++%NORX_D], out, in, inlen);
 
-            while(lane_size >= BYTES(RATE))
-            {
-                norx_encrypt_block(lane[i], out + offset, in + offset);
-                offset    += stride;
-                lane_size -= BYTES(RATE);
-            }
-            norx_encrypt_lastblock(lane[i], out + offset, in + offset, lane_size);
+        /* Pad remaining blocks */
+        norx_pad(emptyblock, emptyblock, 0);
+        for(j = 0; j < (NORX_D-1); ++j, ++i)
+        {
+            norx_absorb(lane[i%NORX_D], emptyblock, PAYLOAD_TAG);
         }
 
         /* Merge */

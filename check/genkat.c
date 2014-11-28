@@ -23,7 +23,7 @@ static void genkat(void)
 	unsigned char k[32];
 	unsigned char n[16];
 
-	int i, j;
+	unsigned int i, j;
 
 	for(i = 0; i < sizeof w; ++i)
 		w[i] = 255 & (i*197 + 123);

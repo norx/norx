@@ -32,14 +32,19 @@
 #include <string.h>
 #include <stdint.h>
 
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-#define MAX(x, y) ((x) < (y) ? (x) : (y))
 #define BYTES(x) (((x) + 7) / 8)
 #define WORDS(x) (((x) + (NORX_W-1)) / NORX_W)
 
 #define BITS(x) (sizeof(x) * CHAR_BIT)
 #define ROTL(x, c) ( ((x) << (c)) | ((x) >> (BITS(x) - (c))) )
 #define ROTR(x, c) ( ((x) >> (c)) | ((x) << (BITS(x) - (c))) )
+
+static NORX_INLINE uint16_t load16(const void * in)
+{
+  const uint8_t * p = (const uint8_t *)in;
+  return ((uint16_t)p[0] << 0) |
+         ((uint16_t)p[1] << 8);
+}
 
 static NORX_INLINE uint32_t load32(const void * in)
 {
@@ -76,6 +81,12 @@ static NORX_INLINE uint64_t load64(const void * in)
 #endif
 }
 
+static NORX_INLINE void store16(void * out, const uint16_t v)
+{
+  uint8_t * p = (uint8_t *)out;
+  p[0] = (uint8_t)(v >> 0);
+  p[1] = (uint8_t)(v >> 8);
+}
 
 static NORX_INLINE void store32(void * out, const uint32_t v)
 {
