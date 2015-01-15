@@ -71,9 +71,6 @@ typedef enum tag__
 #define AND128(A, B) _mm_and_si128((A), (B))
 #define ADD128(A, B) _mm_add_epi64((A), (B))
 
-/* NORX64-specific constants */
-#define NORX_PARAMETER ((NORX_R << 26) | (NORX_D << 18) | (NORX_W << 10) | NORX_A)
-
 #define U0 0x243F6A8885A308D3ULL
 #define U1 0x13198A2E03707344ULL
 #define U2 0xA4093822299F31D0ULL
@@ -447,7 +444,7 @@ int crypto_aead_decrypt(
 
     /* Verify tag */
     A = _mm256_cmpeq_epi8(A, LOADU(c +  0));
-    return _mm256_movemask_epi8(A) == 0xFFFFFFFF ? 0 : -1;
+    return (((unsigned long long)_mm256_movemask_epi8(A) + 1) >> 32) - 1;
 }
 
 

@@ -440,5 +440,5 @@ int crypto_aead_decrypt(
 
     /* Verify tag */
     A = _mm_cmpeq_epi8(A, LOADU(c +  0));
-    return _mm_movemask_epi8(A) == 0xFFFF ? 0 : -1;
+    return (((unsigned long)_mm_movemask_epi8(A) + 1) >> 16) - 1;
 }
