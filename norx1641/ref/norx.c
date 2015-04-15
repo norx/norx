@@ -46,8 +46,8 @@
     /* Initialization constants */
     static const norx_word_t norx_ui[4] =
     {
-      0x243F6A8885A308D3, 0x13198A2E03707344,
-      0xA4093822299F31D0, 0x082EFA98EC4E6C89,
+      0x243F6A8885A308D3ULL, 0x13198A2E03707344ULL,
+      0xA4093822299F31D0ULL, 0x082EFA98EC4E6C89ULL,
     };
 
     #if defined(NORX_DEBUG)
@@ -68,8 +68,8 @@
     /* Initialization constants */
     static const norx_word_t norx_ui[4] =
     {
-       0x243F6A88, 0x85A308D3,
-       0x13198A2E, 0x03707344
+       0x243F6A88UL, 0x85A308D3UL,
+       0x13198A2EUL, 0x03707344UL
     };
 
     #if defined(NORX_DEBUG)
