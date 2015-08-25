@@ -11,8 +11,8 @@
    You should have received a copy of the CC0 Public Domain Dedication along with
    this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 */
-#define NORX_W         64  /* Word size */
-#define NORX_R          4  /* Round number */
-#define NORX_D          4  /* Parallelism degree */
-#define NORX_A (4*NORX_W)  /* Tag size */
+#define NORX_W 64           /* Word size */
+#define NORX_L 4            /* Round number */
+#define NORX_P 4            /* Parallelism degree */
+#define NORX_T (NORX_W * 4) /* Tag size */
 
