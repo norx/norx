@@ -1,0 +1,81 @@
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+
+void norx_aead_encrypt(
+        unsigned char *c, size_t *clen,
+        const unsigned char *a, size_t alen,
+        const unsigned char *m, size_t mlen,
+        const unsigned char *z, size_t zlen,
+        const unsigned char *nonce,
+        const unsigned char *key);
+
+int norx_aead_decrypt(
+        unsigned char *p, size_t *plen,
+        const unsigned char *a, size_t alen,
+        const unsigned char *c, size_t clen,
+        const unsigned char *z, size_t zlen,
+        const unsigned char *nonce,
+        const unsigned char *key);
+
+static void print_bytes(const unsigned char *in, size_t inlen)
+{
+    size_t i;
+    for (i = 0; i < inlen; ++i) {
+        printf("%02X%c", in[i], i%16 == 15 ? '\n' : ' ');
+    }
+    if (inlen%16 != 0) {
+        printf("\n");
+    }
+    printf("\n");
+}
+
+#define MAX_A 1024
+#define MAX_M 1024
+#define MAX_Z 1024
+
+int main() {
+    unsigned char k[32] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0xFF,0xEE,0xDD,0xCC,0xBB,0xAA,0x99,0x88,0x77,0x66,0x55,0x44,0x33,0x22,0x11,0x00};
+    unsigned char n[16] = {0xF0,0xE0,0xD0,0xC0,0xB0,0xA0,0x90,0x80,0x70,0x60,0x50,0x40,0x30,0x20,0x10,0x00};
+    unsigned char a[MAX_A] = {0};
+    unsigned char m[MAX_M] = {0};
+    unsigned char c[MAX_M + 32] = {0};
+    unsigned char z[MAX_Z] = {0};
+
+    size_t alen = 127;
+    size_t mlen = 128;
+    size_t clen = 0;
+    size_t zlen = 129;
+    size_t i = 0;
+    int result = -1;
+
+    for (i = 0; i < alen; ++i) { a[i] = i & 255; }
+    for (i = 0; i < mlen; ++i) { m[i] = i & 255; }
+    for (i = 0; i < zlen; ++i) { z[i] = i & 255; }
+
+    printf("========== SETUP ==========\n");
+    printf("Key:\n");
+    print_bytes(k, sizeof k);
+    printf("Nonce:\n");
+    print_bytes(n, sizeof n);
+    printf("Header:\n");
+    print_bytes(a, alen);
+    printf("Message:\n");
+    print_bytes(m, mlen);
+    printf("Trailer:\n");
+    print_bytes(z, zlen);
+
+    printf("========== ENCRYPTION ==========\n");
+    norx_aead_encrypt(c, &clen, a, alen, m, mlen, z, zlen, n, k);
+    printf("Ciphertext + tag:\n");
+    print_bytes(c, clen);
+
+    printf("========== DECRYPTION ==========\n");
+    result = norx_aead_decrypt(m, &mlen, a, alen, c, clen, z, zlen, n, k);
+    printf("Decrypted message:\n");
+    print_bytes(m, mlen);
+
+    printf("verify: %d\n", result);
+
+    return 0;
+}
