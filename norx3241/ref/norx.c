@@ -59,7 +59,7 @@ const char * norx_version = "2.0";
     #define R2 40
     #define R3 63
 
-    /* Initialization constants (new) */
+    /* Initialization constants */
     static const norx_word_t norx_ui[10] =
     {
         0xE4D324772B91DF79ULL, 0x3AEC9ABAAEB02CCBULL,
@@ -111,11 +111,11 @@ static void print_bytes(const uint8_t *in, size_t inlen)
 
 static void norx_debug(norx_state_t state, const uint8_t *in, size_t inlen, const uint8_t *out, size_t outlen)
 {
-    if (inlen > 0) {
+    if (in != NULL && inlen > 0) {
         printf("In:\n");
         print_bytes(in, inlen);
     }
-    if (outlen > 0) {
+    if (out != NULL && outlen > 0) {
         printf("Out:\n");
         print_bytes(out, outlen);
     }
@@ -401,9 +401,8 @@ void norx_encrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
 {
     if (inlen > 0)
     {
-        size_t i, j;
+        size_t i;
         norx_state_t lane[NORX_P];
-        uint8_t emptyblock[BYTES(NORX_R)];
 
         /* Initialize states + branch */
         for (i = 0; i < NORX_P; ++i) {
@@ -414,17 +413,19 @@ void norx_encrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
         /* Parallel payload processing */
         for (i = 0; inlen >= BYTES(NORX_R); ++i) {
             norx_encrypt_block(lane[i%NORX_P], out, in);
+            #if defined(NORX_DEBUG)
+            printf("Encrypt block (lane: %lu)\n", i%NORX_P);
+            norx_debug(lane[i%NORX_P], in, BYTES(NORX_R), out, BYTES(NORX_R));
+            #endif
             inlen -= BYTES(NORX_R);
             out   += BYTES(NORX_R);
             in    += BYTES(NORX_R);
         }
-        norx_encrypt_lastblock(lane[i++%NORX_P], out, in, inlen);
-
-        /* Pad remaining blocks */
-        norx_pad(emptyblock, emptyblock, 0);
-        for (j = 0; j < (NORX_P-1); ++j, ++i) {
-            norx_absorb_block(lane[i%NORX_P], emptyblock, PAYLOAD_TAG);
-        }
+        norx_encrypt_lastblock(lane[i%NORX_P], out, in, inlen);
+        #if defined(NORX_DEBUG)
+        printf("Encrypt lastblock (lane: %lu)\n", i%NORX_P);
+        norx_debug(lane[i%NORX_P], in, inlen, out, inlen);
+        #endif
 
         /* Merge */
         memset(state, 0, sizeof(norx_state_t));
@@ -432,6 +433,11 @@ void norx_encrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
             norx_merge(state, lane[i]);
             burn(lane[i], 0, sizeof(norx_state_t));
         }
+
+        #if defined(NORX_DEBUG)
+        printf("Encryption finalised\n");
+        norx_debug(state, NULL, 0, NULL, 0);
+        #endif
     }
 }
 
@@ -439,9 +445,8 @@ void norx_decrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
 {
     if (inlen > 0)
     {
-        size_t i, j;
+        size_t i;
         norx_state_t lane[NORX_P];
-        uint8_t emptyblock[BYTES(NORX_R)];
 
         /* Initialize states + branch */
         for (i = 0; i < NORX_P; ++i) {
@@ -452,17 +457,19 @@ void norx_decrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
         /* Parallel payload processing */
         for (i = 0; inlen >= BYTES(NORX_R); ++i) {
             norx_decrypt_block(lane[i%NORX_P], out, in);
+            #if defined(NORX_DEBUG)
+            printf("Decrypt block (lane: %lu)\n", i%NORX_P);
+            norx_debug(lane[i%NORX_P], in, BYTES(NORX_R), out, BYTES(NORX_R));
+            #endif
             inlen -= BYTES(NORX_R);
             out   += BYTES(NORX_R);
             in    += BYTES(NORX_R);
         }
-        norx_decrypt_lastblock(lane[i++%NORX_P], out, in, inlen);
-
-        /* Pad remaining blocks */
-        norx_pad(emptyblock, emptyblock, 0);
-        for (j = 0; j < NORX_P - 1; ++j, ++i) {
-            norx_absorb_block(lane[i%NORX_P], emptyblock, PAYLOAD_TAG);
-        }
+        norx_decrypt_lastblock(lane[i%NORX_P], out, in, inlen);
+        #if defined(NORX_DEBUG)
+        printf("Decrypt lastblock (lane: %lu)\n", i%NORX_P);
+        norx_debug(lane[i%NORX_P], in, inlen, out, inlen);
+        #endif
 
         /* Merge */
         memset(state, 0, sizeof(norx_state_t));
@@ -471,6 +478,10 @@ void norx_decrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
             burn(lane[i], 0, sizeof(norx_state_t));
         }
 
+        #if defined(NORX_DEBUG)
+        printf("Decryption finalised\n");
+        norx_debug(state, NULL, 0, NULL, 0);
+        #endif
     }
 }
 
