@@ -38,16 +38,6 @@ const char * norx_version = "2.0";
     #define R2 16
     #define R3 31
 
-    /* Initialization constants */
-    static const norx_word_t norx_ui[10] =
-    {
-        0x0454EDABUL, 0xAC6851CCUL,
-        0xB707322FUL, 0xA0C7C90DUL,
-        0x99AB09ACUL, 0xA643466DUL,
-        0x21C22362UL, 0x1230C950UL,
-        0xA3D8D930UL, 0x3FA8B72CUL,
-    };
-
 #elif NORX_W == 64 /* NORX64 specific */
 
     #define LOAD load64
@@ -59,16 +49,6 @@ const char * norx_version = "2.0";
     #define R2 40
     #define R3 63
 
-    /* Initialization constants */
-    static const norx_word_t norx_ui[10] =
-    {
-        0xE4D324772B91DF79ULL, 0x3AEC9ABAAEB02CCBULL,
-        0x9DFBA13DB4289311ULL, 0xEF9EB4BF5A97F2C8ULL,
-        0x3F466E92C1532034ULL, 0xE6E986626CC405C1ULL,
-        0xACE40F3B549184E1ULL, 0xD9CFD35762614477ULL,
-        0xB15E641748DE5E6BULL, 0xAA95E955E10F8410ULL,
-    };
-
 #else
     #error "Invalid word size!"
 #endif
@@ -78,7 +58,7 @@ const char * norx_version = "2.0";
 #include <stdio.h>
 #include <inttypes.h>
 
-#if NORX_W == 32
+#if   NORX_W == 32
     #define NORX_FMT "08" PRIX32
 #elif NORX_W == 64
     #define NORX_FMT "016" PRIX64
@@ -260,26 +240,22 @@ static NORX_INLINE void norx_decrypt_lastblock(norx_state_t state, uint8_t *out,
 void norx_init(norx_state_t state, const unsigned char *k, const unsigned char *n)
 {
     norx_word_t * S = state->S;
+    size_t i;
+
+    for(i = 0; i < 16; ++i) {
+        S[i] = i;
+    }
+
+    F(S);
+    F(S);
 
     S[ 0] = LOAD(n + 0 * BYTES(NORX_W));
     S[ 1] = LOAD(n + 1 * BYTES(NORX_W));
-    S[ 2] = norx_ui[0];
-    S[ 3] = norx_ui[1];
 
     S[ 4] = LOAD(k + 0 * BYTES(NORX_W));
     S[ 5] = LOAD(k + 1 * BYTES(NORX_W));
     S[ 6] = LOAD(k + 2 * BYTES(NORX_W));
     S[ 7] = LOAD(k + 3 * BYTES(NORX_W));
-
-    S[ 8] = norx_ui[2];
-    S[ 9] = norx_ui[3];
-    S[10] = norx_ui[4];
-    S[11] = norx_ui[5];
-
-    S[12] = norx_ui[6];
-    S[13] = norx_ui[7];
-    S[14] = norx_ui[8];
-    S[15] = norx_ui[9];
 
     S[12] ^= NORX_W;
     S[13] ^= NORX_L;
