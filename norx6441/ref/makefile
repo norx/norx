@@ -1,4 +1,5 @@
-CFLAGS=-O3 -march=native -std=c89 -Wall -Wextra -pedantic -Wno-long-long
+CC=gcc-5
+CFLAGS=-O3 -std=c89 -Wall -Wextra -pedantic -Wno-long-long
 
 all: check bench
 
