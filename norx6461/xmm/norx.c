@@ -24,7 +24,7 @@
 const char * norx_version = "2.0";
 
 #define NORX_W 64                /* word size */
-#define NORX_L 4                 /* round number */
+#define NORX_L 6                 /* round number */
 #define NORX_P 1                 /* parallelism degree */
 #define NORX_T (NORX_W *  4)     /* tag size */
 #define NORX_N (NORX_W *  2)     /* nonce size */
