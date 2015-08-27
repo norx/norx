@@ -316,7 +316,7 @@ do                                                         \
 do                                                               \
 {                                                                \
     size_t j;                                                    \
-    ALIGN(64) unsigned char lastblock[BYTES(NORX_R)];            \
+    ALIGN(64) unsigned char lastblock[BYTES(NORX_R)] = {0};      \
     INJECT_DOMAIN_CONSTANT(S, PAYLOAD_TAG);                      \
     PERMUTE(S);                                                  \
     for (j = 0; j < WORDS(NORX_R)/2; ++j)                        \
