@@ -1,13 +1,19 @@
-CFLAGS=-O3 -march=armv7-a -mcpu=cortex-a9 -mfpu=neon -std=c99 -Wall -pedantic -Wno-long-long
+CFLAGS=-O3 -mcpu=cortex-a8 -mfpu=neon -std=c99 -Wall -pedantic -Wno-long-long
 
 all: check bench
 
+debug:
+	@$(CC) $(CFLAGS) -DNORX_DEBUG -I. -o debug ../../utils/debug.c norx.c
+	@./debug
+	@rm debug
+
 bench:
-	@$(CC) $(CFLAGS) -o bench ../../bench/bench.c norx.c
+	@$(CC) $(CFLAGS) -o bench ../../utils/bench.c norx.c caesar.c
 	@./bench
 	@rm bench
 
 check:
-	@$(CC) $(CFLAGS) -I. -o check ../../check/check.c norx.c
+	@$(CC) $(CFLAGS) -I../ -o check ../../utils/check.c norx.c caesar.c
 	@./check
 	@rm check
+
