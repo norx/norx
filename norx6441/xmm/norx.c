@@ -447,8 +447,8 @@ void norx_aead_encrypt(
     ENCRYPT_DATA(S, c, m, mlen);
     ABSORB_DATA(S, z, zlen, TRAILER_TAG);
     FINALISE(S);
-    STOREU(c + mlen +  0, S[0]);
-    STOREU(c + mlen + 16, S[1]);
+    STOREU(c + mlen,                   S[0]);
+    STOREU(c + mlen + BYTES(NORX_T)/2, S[1]);
 }
 
 
@@ -476,6 +476,6 @@ int norx_aead_decrypt(
     /* Verify tag */
     S[0] = _mm_cmpeq_epi8(S[0], LOADU(c + clen - BYTES(NORX_T)  ));
     S[1] = _mm_cmpeq_epi8(S[1], LOADU(c + clen - BYTES(NORX_T)/2));
-    return (((unsigned long)_mm_movemask_epi8(AND(S[0], S[1])) + 1) >> 16) - 1;
+    return _mm_movemask_epi8(AND(S[0], S[1])) == 0xFFFF ? 0 : -1;
 }
 
