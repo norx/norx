@@ -11,7 +11,6 @@
    this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 */
 
-#include <stdio.h>
 #include <string.h>
 #include "norx.h"
 
@@ -90,7 +89,6 @@ const char * norx_version = "2.0";
 #define U14 0xDA24516BF55EAFD4ULL
 #define U15 0x86026AE8536F1501ULL
 
-
 #define R0  8
 #define R1 19
 #define R2 40
@@ -98,157 +96,157 @@ const char * norx_version = "2.0";
 
 /* Implementation */
 #if defined(TWEAK_LOW_LATENCY)
-  #define G(S)                                           \
-  do                                                     \
-  {                                                      \
-      __m128i L[2], R[2];                                \
-                                                         \
-      L[0] = XOR(S[0], S[2]);    R[0] = XOR(S[1], S[3]); \
-      L[1] = AND(S[0], S[2]);    R[1] = AND(S[1], S[3]); \
-      L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
-      S[0] = XOR(L[0], L[1]);    S[1] = XOR(R[0], R[1]); \
-      S[6] = XOR(S[6], L[0]);    S[7] = XOR(S[7], R[0]); \
-      S[6] = XOR(S[6], L[1]);    S[7] = XOR(S[7], R[1]); \
-      S[6] = ROT(S[6], R0);      S[7] = ROT(S[7], R0);   \
-                                                         \
-      L[0] = XOR(S[4], S[6]);    R[0] = XOR(S[5], S[7]); \
-      L[1] = AND(S[4], S[6]);    R[1] = AND(S[5], S[7]); \
-      L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
-      S[4] = XOR(L[0], L[1]);    S[5] = XOR(R[0], R[1]); \
-      S[2] = XOR(S[2], L[0]);    S[3] = XOR(S[3], R[0]); \
-      S[2] = XOR(S[2], L[1]);    S[3] = XOR(S[3], R[1]); \
-      S[2] = ROT(S[2], R1);      S[3] = ROT(S[3], R1);   \
-                                                         \
-      L[0] = XOR(S[0], S[2]);    R[0] = XOR(S[1], S[3]); \
-      L[1] = AND(S[0], S[2]);    R[1] = AND(S[1], S[3]); \
-      L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
-      S[0] = XOR(L[0], L[1]);    S[1] = XOR(R[0], R[1]); \
-      S[6] = XOR(S[6], L[0]);    S[7] = XOR(S[7], R[0]); \
-      S[6] = XOR(S[6], L[1]);    S[7] = XOR(S[7], R[1]); \
-      S[6] = ROT(S[6], R2);      S[7] = ROT(S[7], R2);   \
-                                                         \
-      L[0] = XOR(S[4], S[6]);    R[0] = XOR(S[5], S[7]); \
-      L[1] = AND(S[4], S[6]);    R[1] = AND(S[5], S[7]); \
-      L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
-      S[4] = XOR(L[0], L[1]);    S[5] = XOR(R[0], R[1]); \
-      S[2] = XOR(S[2], L[0]);    S[3] = XOR(S[3], R[0]); \
-      S[2] = XOR(S[2], L[1]);    S[3] = XOR(S[3], R[1]); \
-      S[2] = ROT(S[2], R3);      S[3] = ROT(S[3], R3);   \
+  #define G(A0, A1, B0, B1, C0, C1, D0, D1)  \
+  do                                         \
+  {                                          \
+      __m128i l0, l1, r0, r1;                \
+                                             \
+      l0 = XOR(A0, B0);    r0 = XOR(A1, B1); \
+      l1 = AND(A0, B0);    r1 = AND(A1, B1); \
+      l1 = ADD(l1, l1);    r1 = ADD(r1, r1); \
+      A0 = XOR(l0, l1);    A1 = XOR(r0, r1); \
+      D0 = XOR(D0, l0);    D1 = XOR(D1, r0); \
+      D0 = XOR(D0, l1);    D1 = XOR(D1, r1); \
+      D0 = ROT(D0, R0);    D1 = ROT(D1, R0); \
+                                             \
+      l0 = XOR(C0, D0);    r0 = XOR(C1, D1); \
+      l1 = AND(C0, D0);    r1 = AND(C1, D1); \
+      l1 = ADD(l1, l1);    r1 = ADD(r1, r1); \
+      C0 = XOR(l0, l1);    C1 = XOR(r0, r1); \
+      B0 = XOR(B0, l0);    B1 = XOR(B1, r0); \
+      B0 = XOR(B0, l1);    B1 = XOR(B1, r1); \
+      B0 = ROT(B0, R1);    B1 = ROT(B1, R1); \
+                                             \
+      l0 = XOR(A0, B0);    r0 = XOR(A1, B1); \
+      l1 = AND(A0, B0);    r1 = AND(A1, B1); \
+      l1 = ADD(l1, l1);    r1 = ADD(r1, r1); \
+      A0 = XOR(l0, l1);    A1 = XOR(r0, r1); \
+      D0 = XOR(D0, l0);    D1 = XOR(D1, r0); \
+      D0 = XOR(D0, l1);    D1 = XOR(D1, r1); \
+      D0 = ROT(D0, R2);    D1 = ROT(D1, R2); \
+                                             \
+      l0 = XOR(C0, D0);    r0 = XOR(C1, D1); \
+      l1 = AND(C0, D0);    r1 = AND(C1, D1); \
+      l1 = ADD(l1, l1);    r1 = ADD(r1, r1); \
+      C0 = XOR(l0, l1);    C1 = XOR(r0, r1); \
+      B0 = XOR(B0, l0);    B1 = XOR(B1, r0); \
+      B0 = XOR(B0, l1);    B1 = XOR(B1, r1); \
+      B0 = ROT(B0, R3);    B1 = ROT(B1, R3); \
   } while(0)
 #else
-    #define G(S)                                           \
-    do                                                     \
-    {                                                      \
-        __m128i L[2], R[2];                                \
-                                                           \
-        L[0] = XOR(S[0], S[2]);    R[0] = XOR(S[1], S[3]); \
-        L[1] = AND(S[0], S[2]);    R[1] = AND(S[1], S[3]); \
-        L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
-        S[0] = XOR(L[0], L[1]);    S[1] = XOR(R[0], R[1]); \
-        S[6] = XOR(S[6], S[0]);    S[7] = XOR(S[7], S[1]); \
-        S[6] = ROT(S[6], R0);      S[7] = ROT(S[7], R0);   \
-                                                           \
-        L[0] = XOR(S[4], S[6]);    R[0] = XOR(S[5], S[7]); \
-        L[1] = AND(S[4], S[6]);    R[1] = AND(S[5], S[7]); \
-        L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
-        S[4] = XOR(L[0], L[1]);    S[5] = XOR(R[0], R[1]); \
-        S[2] = XOR(S[2], S[4]);    S[3] = XOR(S[3], S[5]); \
-        S[2] = ROT(S[2], R1);      S[3] = ROT(S[3], R1);   \
-                                                           \
-        L[0] = XOR(S[0], S[2]);    R[0] = XOR(S[1], S[3]); \
-        L[1] = AND(S[0], S[2]);    R[1] = AND(S[1], S[3]); \
-        L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
-        S[0] = XOR(L[0], L[1]);    S[1] = XOR(R[0], R[1]); \
-        S[6] = XOR(S[6], S[0]);    S[7] = XOR(S[7], S[1]); \
-        S[6] = ROT(S[6], R2);      S[7] = ROT(S[7], R2);   \
-                                                           \
-        L[0] = XOR(S[4], S[6]);    R[0] = XOR(S[5], S[7]); \
-        L[1] = AND(S[4], S[6]);    R[1] = AND(S[5], S[7]); \
-        L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
-        S[4] = XOR(L[0], L[1]);    S[5] = XOR(R[0], R[1]); \
-        S[2] = XOR(S[2], S[4]);    S[3] = XOR(S[3], S[5]); \
-        S[2] = ROT(S[2], R3);      S[3] = ROT(S[3], R3);   \
+    #define G(A0, A1, B0, B1, C0, C1, D0, D1)  \
+    do                                         \
+    {                                          \
+        __m128i l0, l1, r0, r1;                \
+                                               \
+        l0 = XOR(A0, B0);    r0 = XOR(A1, B1); \
+        l1 = AND(A0, B0);    r1 = AND(A1, B1); \
+        l1 = ADD(l1, l1);    r1 = ADD(r1, r1); \
+        A0 = XOR(l0, l1);    A1 = XOR(r0, r1); \
+        D0 = XOR(D0, A0);    D1 = XOR(D1, A1); \
+        D0 = ROT(D0, R0);    D1 = ROT(D1, R0); \
+                                               \
+        l0 = XOR(C0, D0);    r0 = XOR(C1, D1); \
+        l1 = AND(C0, D0);    r1 = AND(C1, D1); \
+        l1 = ADD(l1, l1);    r1 = ADD(r1, r1); \
+        C0 = XOR(l0, l1);    C1 = XOR(r0, r1); \
+        B0 = XOR(B0, C0);    B1 = XOR(B1, C1); \
+        B0 = ROT(B0, R1);    B1 = ROT(B1, R1); \
+                                               \
+        l0 = XOR(A0, B0);    r0 = XOR(A1, B1); \
+        l1 = AND(A0, B0);    r1 = AND(A1, B1); \
+        l1 = ADD(l1, l1);    r1 = ADD(r1, r1); \
+        A0 = XOR(l0, l1);    A1 = XOR(r0, r1); \
+        D0 = XOR(D0, A0);    D1 = XOR(D1, A1); \
+        D0 = ROT(D0, R2);    D1 = ROT(D1, R2); \
+                                               \
+        l0 = XOR(C0, D0);    r0 = XOR(C1, D1); \
+        l1 = AND(C0, D0);    r1 = AND(C1, D1); \
+        l1 = ADD(l1, l1);    r1 = ADD(r1, r1); \
+        C0 = XOR(l0, l1);    C1 = XOR(r0, r1); \
+        B0 = XOR(B0, C0);    B1 = XOR(B1, C1); \
+        B0 = ROT(B0, R3);    B1 = ROT(B1, R3); \
     } while(0)
 #endif
 
 #if defined(__SSSE3__)
-#define DIAGONALIZE(S)                     \
-do                                         \
-{                                          \
-    __m128i T[2];                          \
-                                           \
-    T[0] = _mm_alignr_epi8(S[3], S[2], 8); \
-    T[1] = _mm_alignr_epi8(S[2], S[3], 8); \
-    S[2] = T[0];                           \
-    S[3] = T[1];                           \
-                                           \
-    T[0] = S[4];                           \
-    S[4] = S[5];                           \
-    S[5] = T[0];                           \
-                                           \
-    T[0] = _mm_alignr_epi8(S[7], S[6], 8); \
-    T[1] = _mm_alignr_epi8(S[6], S[7], 8); \
-    S[6] = T[1];                           \
-    S[7] = T[0];                           \
+#define DIAGONALIZE(A0, A1, B0, B1, C0, C1, D0, D1) \
+do                                                  \
+{                                                   \
+    __m128i t0, t1;                                 \
+                                                    \
+    t0 = _mm_alignr_epi8(B1, B0, 8);                \
+    t1 = _mm_alignr_epi8(B0, B1, 8);                \
+    B0 = t0;                                        \
+    B1 = t1;                                        \
+                                                    \
+    t0 = C0;                                        \
+    C0 = C1;                                        \
+    C1 = t0;                                        \
+                                                    \
+    t0 = _mm_alignr_epi8(D1, D0, 8);                \
+    t1 = _mm_alignr_epi8(D0, D1, 8);                \
+    D0 = t1;                                        \
+    D1 = t0;                                        \
 } while(0)
 
-#define UNDIAGONALIZE(S)                   \
-do                                         \
-{                                          \
-    __m128i T[2];                          \
-                                           \
-    T[0] = _mm_alignr_epi8(S[2], S[3], 8); \
-    T[1] = _mm_alignr_epi8(S[3], S[2], 8); \
-    S[2] = T[0];                           \
-    S[3] = T[1];                           \
-                                           \
-    T[0] = S[4];                           \
-    S[4] = S[5];                           \
-    S[5] = T[0];                           \
-                                           \
-    T[0] = _mm_alignr_epi8(S[6], S[7], 8); \
-    T[1] = _mm_alignr_epi8(S[7], S[6], 8); \
-    S[6] = T[1];                           \
-    S[7] = T[0];                           \
+#define UNDIAGONALIZE(A0, A1, B0, B1, C0, C1, D0, D1) \
+do                                                    \
+{                                                     \
+    __m128i t0, t1;                                   \
+                                                      \
+    t0 = _mm_alignr_epi8(B0, B1, 8);                  \
+    t1 = _mm_alignr_epi8(B1, B0, 8);                  \
+    B0 = t0;                                          \
+    B1 = t1;                                          \
+                                                      \
+    t0 = C0;                                          \
+    C0 = C1;                                          \
+    C1 = t0;                                          \
+                                                      \
+    t0 = _mm_alignr_epi8(D0, D1, 8);                  \
+    t1 = _mm_alignr_epi8(D1, D0, 8);                  \
+    D0 = t1;                                          \
+    D1 = t0;                                          \
 } while(0)
 
 #else
 
-#define DIAGONALIZE(S)                                               \
-do                                                                   \
-{                                                                    \
-    __m128i T[2];                                                    \
-                                                                     \
-    T[0] = S[6]; T[1] = S[2];                                        \
-    S[6] = S[4]; S[4] = S[5]; S[5] = S[6];                           \
-    S[6] = _mm_unpackhi_epi64(S[7], _mm_unpacklo_epi64(T[0], T[0])); \
-    S[7] = _mm_unpackhi_epi64(T[0], _mm_unpacklo_epi64(S[7], S[7])); \
-    S[2] = _mm_unpackhi_epi64(S[2], _mm_unpacklo_epi64(S[3], S[3])); \
-    S[3] = _mm_unpackhi_epi64(S[3], _mm_unpacklo_epi64(T[1], T[1])); \
+#define DIAGONALIZE(A0, A1, B0, B1, C0, C1, D0, D1)          \
+do                                                           \
+{                                                            \
+    __m128i t0, t1;                                          \
+                                                             \
+    t0 = D0; t1 = B0;                                        \
+    D0 = C0; C0 = C1; C1 = D0;                               \
+    D0 = _mm_unpackhi_epi64(D1, _mm_unpacklo_epi64(t0, t0)); \
+    D1 = _mm_unpackhi_epi64(t0, _mm_unpacklo_epi64(D1, D1)); \
+    B0 = _mm_unpackhi_epi64(B0, _mm_unpacklo_epi64(B1, B1)); \
+    B1 = _mm_unpackhi_epi64(B1, _mm_unpacklo_epi64(t1, t1)); \
 } while(0)
 
-#define UNDIAGONALIZE(S)                                             \
-do                                                                   \
-{                                                                    \
-    __m128i T[2];                                                    \
-                                                                     \
-    T[0] = S[4]; S[4] = S[5]; S[5] = T[0];                           \
-    T[0] = S[2]; T[1] = S[6];                                        \
-    S[2] = _mm_unpackhi_epi64(S[3], _mm_unpacklo_epi64(S[2], S[2])); \
-    S[3] = _mm_unpackhi_epi64(T[0], _mm_unpacklo_epi64(S[3], S[3])); \
-    S[6] = _mm_unpackhi_epi64(S[6], _mm_unpacklo_epi64(S[7], S[7])); \
-    S[7] = _mm_unpackhi_epi64(S[7], _mm_unpacklo_epi64(T[1], T[1])); \
+#define UNDIAGONALIZE(A0, A1, B0, B1, C0, C1, D0, D1)        \
+do                                                           \
+{                                                            \
+    __m128i t0, t1;                                          \
+                                                             \
+    t0 = C0; C0 = C1; C1 = t0;                               \
+    t0 = B0; t1 = D0;                                        \
+    B0 = _mm_unpackhi_epi64(B1, _mm_unpacklo_epi64(B0, B0)); \
+    B1 = _mm_unpackhi_epi64(t0, _mm_unpacklo_epi64(B1, B1)); \
+    D0 = _mm_unpackhi_epi64(D0, _mm_unpacklo_epi64(D1, D1)); \
+    D1 = _mm_unpackhi_epi64(D1, _mm_unpacklo_epi64(t1, t1)); \
 } while(0)
 
 #endif
 
-#define F(S)         \
-do                   \
-{                    \
-    G(S);            \
-    DIAGONALIZE(S);  \
-    G(S);            \
-    UNDIAGONALIZE(S);\
+#define F(S)                                                       \
+do                                                                 \
+{                                                                  \
+    G(S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]);             \
+    DIAGONALIZE(S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]);   \
+    G(S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]);             \
+    UNDIAGONALIZE(S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]); \
 } while(0)
 
 #define PERMUTE(S)              \

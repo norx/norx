@@ -107,102 +107,102 @@ const char * norx_version = "2.0";
 
 /* Implementation */
 #if defined(TWEAK_LOW_LATENCY)
-  #define G(S)                \
-  do                          \
-  {                           \
-      __m128i T[2];           \
-                              \
-      T[0] = XOR(S[0], S[1]); \
-      T[1] = AND(S[0], S[1]); \
-      T[1] = ADD(T[1], T[1]); \
-      S[0] = XOR(T[0], T[1]); \
-      S[3] = XOR(S[3], T[0]); \
-      S[3] = XOR(S[3], T[1]); \
-      S[3] = ROT(S[3],   R0); \
-                              \
-      T[0] = XOR(S[2], S[3]); \
-      T[1] = AND(S[2], S[3]); \
-      T[1] = ADD(T[1], T[1]); \
-      S[2] = XOR(T[0], T[1]); \
-      S[1] = XOR(S[1], T[0]); \
-      S[1] = XOR(S[1], T[1]); \
-      S[1] = ROT(S[1],   R1); \
-                              \
-      T[0] = XOR(S[0], S[1]); \
-      T[1] = AND(S[0], S[1]); \
-      T[1] = ADD(T[1], T[1]); \
-      S[0] = XOR(T[0], T[1]); \
-      S[3] = XOR(S[3], T[0]); \
-      S[3] = XOR(S[3], T[1]); \
-      S[3] = ROT(S[3],   R2); \
-                              \
-      T[0] = XOR(S[2], S[3]); \
-      T[1] = AND(S[2], S[3]); \
-      T[1] = ADD(T[1], T[1]); \
-      S[2] = XOR(T[0], T[1]); \
-      S[1] = XOR(S[1], T[0]); \
-      S[1] = XOR(S[1], T[1]); \
-      S[1] = ROT(S[1],   R3); \
+  #define G(A, B, C, D) \
+  do                    \
+  {                     \
+      __m128i t0, t1;   \
+                        \
+      t0 = XOR( A,  B); \
+      t1 = AND( A,  B); \
+      t1 = ADD(t1, t1); \
+       A = XOR(t0, t1); \
+       D = XOR( D, t0); \
+       D = XOR( D, t1); \
+       D = ROT( D, R0); \
+                        \
+      t0 = XOR( C,  D); \
+      t1 = AND( C,  D); \
+      t1 = ADD(t1, t1); \
+       C = XOR(t0, t1); \
+       B = XOR( B, t0); \
+       B = XOR( B, t1); \
+       B = ROT( B, R1); \
+                        \
+      t0 = XOR( A,  B); \
+      t1 = AND( A,  B); \
+      t1 = ADD(t1, t1); \
+       A = XOR(t0, t1); \
+       D = XOR( D, t0); \
+       D = XOR( D, t1); \
+       D = ROT( D, R2); \
+                        \
+      t0 = XOR( C,  D); \
+      t1 = AND( C,  D); \
+      t1 = ADD(t1, t1); \
+       C = XOR(t0, t1); \
+       B = XOR( B, t0); \
+       B = XOR( B, t1); \
+       B = ROT( B, R3); \
   } while(0)
 #else
-  #define G(S)                \
-  do                          \
-  {                           \
-      __m128i T[2];           \
-                              \
-      T[0] = XOR(S[0], S[1]); \
-      T[1] = AND(S[0], S[1]); \
-      T[1] = ADD(T[1], T[1]); \
-      S[0] = XOR(T[0], T[1]); \
-      S[3] = XOR(S[3], S[0]); \
-      S[3] = ROT(S[3],   R0); \
-                              \
-      T[0] = XOR(S[2], S[3]); \
-      T[1] = AND(S[2], S[3]); \
-      T[1] = ADD(T[1], T[1]); \
-      S[2] = XOR(T[0], T[1]); \
-      S[1] = XOR(S[1], S[2]); \
-      S[1] = ROT(S[1],   R1); \
-                              \
-      T[0] = XOR(S[0], S[1]); \
-      T[1] = AND(S[0], S[1]); \
-      T[1] = ADD(T[1], T[1]); \
-      S[0] = XOR(T[0], T[1]); \
-      S[3] = XOR(S[3], S[0]); \
-      S[3] = ROT(S[3],   R2); \
-                              \
-      T[0] = XOR(S[2], S[3]); \
-      T[1] = AND(S[2], S[3]); \
-      T[1] = ADD(T[1], T[1]); \
-      S[2] = XOR(T[0], T[1]); \
-      S[1] = XOR(S[1], S[2]); \
-      S[1] = ROT(S[1],   R3); \
+  #define G(A, B, C, D) \
+  do                    \
+  {                     \
+      __m128i t0, t1;   \
+                        \
+      t0 = XOR( A,  B); \
+      t1 = AND( A,  B); \
+      t1 = ADD(t1, t1); \
+       A = XOR(t0, t1); \
+       D = XOR( D,  A); \
+       D = ROT( D, R0); \
+                        \
+      t0 = XOR( C,  D); \
+      t1 = AND( C,  D); \
+      t1 = ADD(t1, t1); \
+       C = XOR(t0, t1); \
+       B = XOR( B,  C); \
+       B = ROT( B, R1); \
+                        \
+      t0 = XOR( A,  B); \
+      t1 = AND( A,  B); \
+      t1 = ADD(t1, t1); \
+       A = XOR(t0, t1); \
+       D = XOR( D,  A); \
+       D = ROT( D, R2); \
+                        \
+      t0 = XOR( C,  D); \
+      t1 = AND( C,  D); \
+      t1 = ADD(t1, t1); \
+       C = XOR(t0, t1); \
+       B = XOR( B,  C); \
+       B = ROT( B, R3); \
   } while(0)
 #endif
 
-#define DIAGONALIZE(S)                                    \
-do                                                        \
-{                                                         \
-    S[3] = _mm_shuffle_epi32(S[3], _MM_SHUFFLE(2,1,0,3)); \
-    S[2] = _mm_shuffle_epi32(S[2], _MM_SHUFFLE(1,0,3,2)); \
-    S[1] = _mm_shuffle_epi32(S[1], _MM_SHUFFLE(0,3,2,1)); \
+#define DIAGONALIZE(A, B, C, D)                     \
+do                                                  \
+{                                                   \
+    D = _mm_shuffle_epi32(D, _MM_SHUFFLE(2,1,0,3)); \
+    C = _mm_shuffle_epi32(C, _MM_SHUFFLE(1,0,3,2)); \
+    B = _mm_shuffle_epi32(B, _MM_SHUFFLE(0,3,2,1)); \
 } while(0)
 
-#define UNDIAGONALIZE(S)                                  \
-do                                                        \
-{                                                         \
-    S[3] = _mm_shuffle_epi32(S[3], _MM_SHUFFLE(0,3,2,1)); \
-    S[2] = _mm_shuffle_epi32(S[2], _MM_SHUFFLE(1,0,3,2)); \
-    S[1] = _mm_shuffle_epi32(S[1], _MM_SHUFFLE(2,1,0,3)); \
+#define UNDIAGONALIZE(A, B, C, D)                   \
+do                                                  \
+{                                                   \
+    D = _mm_shuffle_epi32(D, _MM_SHUFFLE(0,3,2,1)); \
+    C = _mm_shuffle_epi32(C, _MM_SHUFFLE(1,0,3,2)); \
+    B = _mm_shuffle_epi32(B, _MM_SHUFFLE(2,1,0,3)); \
 } while(0)
 
-#define F(S)          \
-do                    \
-{                     \
-    G(S);             \
-    DIAGONALIZE(S);   \
-    G(S);             \
-    UNDIAGONALIZE(S); \
+#define F(S)                               \
+do                                         \
+{                                          \
+    G(S[0], S[1], S[2], S[3]);             \
+    DIAGONALIZE(S[0], S[1], S[2], S[3]);   \
+    G(S[0], S[1], S[2], S[3]);             \
+    UNDIAGONALIZE(S[0], S[1], S[2], S[3]); \
 } while(0)
 
 #define PERMUTE(S)               \
