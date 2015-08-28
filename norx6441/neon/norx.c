@@ -74,16 +74,22 @@ const char * norx_version = "2.0";
     :   /* else */  ROT_N(X, C) \
 )
 
-#define U0 0xE4D324772B91DF79ULL
-#define U1 0x3AEC9ABAAEB02CCBULL
-#define U2 0x9DFBA13DB4289311ULL
-#define U3 0xEF9EB4BF5A97F2C8ULL
-#define U4 0x3F466E92C1532034ULL
-#define U5 0xE6E986626CC405C1ULL
-#define U6 0xACE40F3B549184E1ULL
-#define U7 0xD9CFD35762614477ULL
-#define U8 0xB15E641748DE5E6BULL
-#define U9 0xAA95E955E10F8410ULL
+#define  U0 0xE4D324772B91DF79ULL
+#define  U1 0x3AEC9ABAAEB02CCBULL
+#define  U2 0x9DFBA13DB4289311ULL
+#define  U3 0xEF9EB4BF5A97F2C8ULL
+#define  U4 0x3F466E92C1532034ULL
+#define  U5 0xE6E986626CC405C1ULL
+#define  U6 0xACE40F3B549184E1ULL
+#define  U7 0xD9CFD35762614477ULL
+#define  U8 0xB15E641748DE5E6BULL
+#define  U9 0xAA95E955E10F8410ULL
+#define U10 0x28D1034441A9DD40ULL
+#define U11 0x7F31BBF964E93BF5ULL
+#define U12 0xB5E9E22493DFFB96ULL
+#define U13 0xB980C852479FAFBDULL
+#define U14 0xDA24516BF55EAFD4ULL
+#define U15 0x86026AE8536F1501ULL
 
 #define R0  8
 #define R1 19
@@ -273,13 +279,13 @@ do                                                               \
 do                                                                              \
 {                                                                               \
     S[0] = LOADU(NONCE);                                                        \
-    S[1] = vcombine_u64( vcreate_u64(U0), vcreate_u64(U1) );                    \
+    S[1] = vcombine_u64( vcreate_u64(U2), vcreate_u64(U3) );                    \
     S[2] = LOADU(KEY + 0 * 2 * BYTES(NORX_W));                                  \
     S[3] = LOADU(KEY + 1 * 2 * BYTES(NORX_W));                                  \
-    S[4] = vcombine_u64( vcreate_u64(U2), vcreate_u64(U3) );                    \
-    S[5] = vcombine_u64( vcreate_u64(U4), vcreate_u64(U5) );                    \
-    S[6] = vcombine_u64( vcreate_u64(U6), vcreate_u64(U7) );                    \
-    S[7] = vcombine_u64( vcreate_u64(U8), vcreate_u64(U9) );                    \
+    S[4] = vcombine_u64( vcreate_u64( U8), vcreate_u64( U9) );                  \
+    S[5] = vcombine_u64( vcreate_u64(U10), vcreate_u64(U11) );                  \
+    S[6] = vcombine_u64( vcreate_u64(U12), vcreate_u64(U13) );                  \
+    S[7] = vcombine_u64( vcreate_u64(U14), vcreate_u64(U15) );                  \
     S[6] = XOR(S[6], vcombine_u64( vcreate_u64(NORX_W), vcreate_u64(NORX_L) )); \
     S[7] = XOR(S[7], vcombine_u64( vcreate_u64(NORX_P), vcreate_u64(NORX_T) )); \
     PERMUTE(S);                                                                 \
