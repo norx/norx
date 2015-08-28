@@ -11,31 +11,34 @@
    this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 */
 
-#if defined(SUPERCOP)
-#   include "crypto_aead.h"
-#endif
-
-#include "config.h"
-
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
+#include "norx.h"
 
 #if defined(_MSC_VER)
-    #include <intrin.h>
+  #include <intrin.h>
 #else
+  #if defined(__XOP__)
     #include <x86intrin.h>
+  #else
+    #include <immintrin.h>
+  #endif
 #endif
 
-typedef enum tag__
-{
-    HEADER_TAG  = 1 << 0,
-    PAYLOAD_TAG = 1 << 1,
-    TRAILER_TAG = 1 << 2,
-    FINAL_TAG   = 1 << 3,
-    BRANCH_TAG  = 1 << 4,
-    MERGE_TAG   = 1 << 5
-} tag_t;
+const char * norx_version = "2.0";
+
+#define NORX_W 32                /* word size */
+#define NORX_L 6                 /* round number */
+#define NORX_P 1                 /* parallelism degree */
+#define NORX_T (NORX_W *  4)     /* tag size */
+#define NORX_N (NORX_W *  2)     /* nonce size */
+#define NORX_K (NORX_W *  4)     /* key size */
+#define NORX_B (NORX_W * 16)     /* permutation width */
+#define NORX_C (NORX_W *  4)     /* capacity */
+#define NORX_R (NORX_B - NORX_C) /* rate */
+
+#define BYTES(x) (((x) + 7) / 8)
+#define WORDS(x) (((x) + (NORX_W-1)) / NORX_W)
 
 /* TODO: special cases for SSE2, XOP, ... */
 #if defined(_MSC_VER)
@@ -69,10 +72,10 @@ typedef enum tag__
     :   /* else */  _mm_or_si128(_mm_srli_epi32((X), (C)), _mm_slli_epi32((X), 32 - (C)))         \
 )
 #else
-#define ROT(X, C)                                                                                 \
-(                                                                                                 \
-        (C) == 31 ? _mm_or_si128(_mm_add_epi32((X), (X)), _mm_srli_epi32((X), 31))                \
-    :   /* else */  _mm_or_si128(_mm_srli_epi32((X), (C)), _mm_slli_epi32((X), 32 - (C)))         \
+#define ROT(X, C)                                                                         \
+(                                                                                         \
+        (C) == 31 ? _mm_or_si128(_mm_add_epi32((X), (X)), _mm_srli_epi32((X), 31))        \
+    :   /* else */  _mm_or_si128(_mm_srli_epi32((X), (C)), _mm_slli_epi32((X), 32 - (C))) \
 )
 #endif
 
@@ -80,16 +83,22 @@ typedef enum tag__
 #define AND(A, B) _mm_and_si128((A), (B))
 #define ADD(A, B) _mm_add_epi32((A), (B))
 
-#define U0 0x243F6A88
-#define U1 0x85A308D3
-#define U2 0x13198A2E
-#define U3 0x03707344
-#define U4 0x254F537A
-#define U5 0x38531D48
-#define U6 0x839C6E83
-#define U7 0xF97A3AE5
-#define U8 0x8C91D88C
-#define U9 0x11EAFB59
+#define  U0 0x0454EDABU
+#define  U1 0xAC6851CCU
+#define  U2 0xB707322FU
+#define  U3 0xA0C7C90DU
+#define  U4 0x99AB09ACU
+#define  U5 0xA643466DU
+#define  U6 0x21C22362U
+#define  U7 0x1230C950U
+#define  U8 0xA3D8D930U
+#define  U9 0x3FA8B72CU
+#define U10 0xED84EB49U
+#define U11 0xEDCA4787U
+#define U12 0x335463EBU
+#define U13 0xF994220BU
+#define U14 0xBE0BF5C9U
+#define U15 0xD7C49104U
 
 #define R0  8
 #define R1 11
@@ -98,347 +107,321 @@ typedef enum tag__
 
 /* Implementation */
 #if defined(TWEAK_LOW_LATENCY)
-	#define G(A, B, C, D)  \
-	do                     \
-	{                      \
-	    __m128i t0, t1;    \
-	                       \
-	    t0 = XOR( A,  B);  \
-	    t1 = AND( A,  B);  \
-	    t1 = ADD(t1, t1);  \
-	    A  = XOR(t0, t1);  \
-	    D  = XOR( D, t0);  \
-	    D  = XOR( D, t1);  \
-	    D  = ROT( D, R0);  \
-	                       \
-	    t0 = XOR( C,  D);  \
-	    t1 = AND( C,  D);  \
-	    t1 = ADD(t1, t1);  \
-	    C  = XOR(t0, t1);  \
-	    B  = XOR( B, t0);  \
-	    B  = XOR( B, t1);  \
-	    B  = ROT( B, R1);  \
-	                       \
-	    t0 = XOR( A,  B);  \
-	    t1 = AND( A,  B);  \
-	    t1 = ADD(t1, t1);  \
-	    A  = XOR(t0, t1);  \
-	    D  = XOR( D, t0);  \
-	    D  = XOR( D, t1);  \
-	    D  = ROT( D, R2);  \
-	                       \
-	    t0 = XOR( C,  D);  \
-	    t1 = AND( C,  D);  \
-	    t1 = ADD(t1, t1);  \
-	    C  = XOR(t0, t1);  \
-	    B  = XOR( B, t0);  \
-	    B  = XOR( B, t1);  \
-	    B  = ROT( B, R3);  \
-	} while(0)
+  #define G(S)                \
+  do                          \
+  {                           \
+      __m128i T[2];           \
+                              \
+      T[0] = XOR(S[0], S[1]); \
+      T[1] = AND(S[0], S[1]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[0] = XOR(T[0], T[1]); \
+      S[3] = XOR(S[3], T[0]); \
+      S[3] = XOR(S[3], T[1]); \
+      S[3] = ROT(S[3],   R0); \
+                              \
+      T[0] = XOR(S[2], S[3]); \
+      T[1] = AND(S[2], S[3]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[2] = XOR(T[0], T[1]); \
+      S[1] = XOR(S[1], T[0]); \
+      S[1] = XOR(S[1], T[1]); \
+      S[1] = ROT(S[1],   R1); \
+                              \
+      T[0] = XOR(S[0], S[1]); \
+      T[1] = AND(S[0], S[1]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[0] = XOR(T[0], T[1]); \
+      S[3] = XOR(S[3], T[0]); \
+      S[3] = XOR(S[3], T[1]); \
+      S[3] = ROT(S[3],   R2); \
+                              \
+      T[0] = XOR(S[2], S[3]); \
+      T[1] = AND(S[2], S[3]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[2] = XOR(T[0], T[1]); \
+      S[1] = XOR(S[1], T[0]); \
+      S[1] = XOR(S[1], T[1]); \
+      S[1] = ROT(S[1],   R3); \
+  } while(0)
 #else
-	#define G(A, B, C, D)  \
-	do                     \
-	{                      \
-	    __m128i t0, t1;    \
-	                       \
-	    t0 = XOR( A,  B);  \
-	    t1 = AND( A,  B);  \
-	    t1 = ADD(t1, t1);  \
-	    A  = XOR(t0, t1);  \
-	    D  = XOR( D,  A);  \
-	    D  = ROT( D, R0);  \
-	                       \
-	    t0 = XOR( C,  D);  \
-	    t1 = AND( C,  D);  \
-	    t1 = ADD(t1, t1);  \
-	    C  = XOR(t0, t1);  \
-	    B  = XOR( B,  C);  \
-	    B  = ROT( B, R1);  \
-	                       \
-	    t0 = XOR( A,  B);  \
-	    t1 = AND( A,  B);  \
-	    t1 = ADD(t1, t1);  \
-	    A  = XOR(t0, t1);  \
-	    D  = XOR( D,  A);  \
-	    D  = ROT( D, R2);  \
-	                       \
-	    t0 = XOR( C,  D);  \
-	    t1 = AND( C,  D);  \
-	    t1 = ADD(t1, t1);  \
-	    C  = XOR(t0, t1);  \
-	    B  = XOR( B,  C);  \
-	    B  = ROT( B, R3);  \
-	} while(0)
+  #define G(S)                \
+  do                          \
+  {                           \
+      __m128i T[2];           \
+                              \
+      T[0] = XOR(S[0], S[1]); \
+      T[1] = AND(S[0], S[1]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[0] = XOR(T[0], T[1]); \
+      S[3] = XOR(S[3], S[0]); \
+      S[3] = ROT(S[3],   R0); \
+                              \
+      T[0] = XOR(S[2], S[3]); \
+      T[1] = AND(S[2], S[3]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[2] = XOR(T[0], T[1]); \
+      S[1] = XOR(S[1], S[2]); \
+      S[1] = ROT(S[1],   R1); \
+                              \
+      T[0] = XOR(S[0], S[1]); \
+      T[1] = AND(S[0], S[1]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[0] = XOR(T[0], T[1]); \
+      S[3] = XOR(S[3], S[0]); \
+      S[3] = ROT(S[3],   R2); \
+                              \
+      T[0] = XOR(S[2], S[3]); \
+      T[1] = AND(S[2], S[3]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[2] = XOR(T[0], T[1]); \
+      S[1] = XOR(S[1], S[2]); \
+      S[1] = ROT(S[1],   R3); \
+  } while(0)
 #endif
 
-
-#define DIAGONALIZE(A, B, C, D)                     \
-do                                                  \
-{                                                   \
-    D = _mm_shuffle_epi32(D, _MM_SHUFFLE(2,1,0,3)); \
-    C = _mm_shuffle_epi32(C, _MM_SHUFFLE(1,0,3,2)); \
-    B = _mm_shuffle_epi32(B, _MM_SHUFFLE(0,3,2,1)); \
+#define DIAGONALIZE(S)                                    \
+do                                                        \
+{                                                         \
+    S[3] = _mm_shuffle_epi32(S[3], _MM_SHUFFLE(2,1,0,3)); \
+    S[2] = _mm_shuffle_epi32(S[2], _MM_SHUFFLE(1,0,3,2)); \
+    S[1] = _mm_shuffle_epi32(S[1], _MM_SHUFFLE(0,3,2,1)); \
 } while(0)
 
-#define UNDIAGONALIZE(A, B, C, D)                   \
-do                                                  \
-{                                                   \
-    D = _mm_shuffle_epi32(D, _MM_SHUFFLE(0,3,2,1)); \
-    C = _mm_shuffle_epi32(C, _MM_SHUFFLE(1,0,3,2)); \
-    B = _mm_shuffle_epi32(B, _MM_SHUFFLE(2,1,0,3)); \
+#define UNDIAGONALIZE(S)                                  \
+do                                                        \
+{                                                         \
+    S[3] = _mm_shuffle_epi32(S[3], _MM_SHUFFLE(0,3,2,1)); \
+    S[2] = _mm_shuffle_epi32(S[2], _MM_SHUFFLE(1,0,3,2)); \
+    S[1] = _mm_shuffle_epi32(S[1], _MM_SHUFFLE(2,1,0,3)); \
 } while(0)
 
-#define F(A, B, C, D)          \
-do                             \
-{                              \
-    G(A, B, C, D);             \
-    DIAGONALIZE(A, B, C, D);   \
-    G(A, B, C, D);             \
-    UNDIAGONALIZE(A, B, C, D); \
+#define F(S)          \
+do                    \
+{                     \
+    G(S);             \
+    DIAGONALIZE(S);   \
+    G(S);             \
+    UNDIAGONALIZE(S); \
 } while(0)
 
-#define PERMUTE(A, B, C, D)      \
+#define PERMUTE(S)               \
 do                               \
 {                                \
     int i;                       \
-    for(i = 0; i < NORX_R; ++i)  \
+    for(i = 0; i < NORX_L; ++i)  \
     {                            \
-        F(A, B, C, D);           \
+        F(S);                    \
     }                            \
 } while(0)
 
-
-#define INJECT_DOMAIN_CONSTANT(A, B, C, D, TAG)  \
-do                                               \
-{                                                \
-    D = XOR(D, _mm_set_epi32(TAG, 0, 0, 0));     \
-} while(0)
-
-
-#define ABSORB_BLOCK(A, B, C, D, BLOCK)             \
-do                                                  \
-{                                                   \
-    INJECT_DOMAIN_CONSTANT(A, B, C, D, HEADER_TAG); \
-    PERMUTE(A, B, C, D);                            \
-    A = XOR(A, LOADU(BLOCK +  0));                  \
-    B = XOR(B, LOADU(BLOCK + 16));                  \
-    C = XOR(C, LOADL(BLOCK + 32));                  \
-} while(0)
-
-#define ENCRYPT_BLOCK(A, B, C, D, IN, OUT)           \
-do                                                   \
-{                                                    \
-    INJECT_DOMAIN_CONSTANT(A, B, C, D, PAYLOAD_TAG); \
-    PERMUTE(A, B, C, D);                             \
-    A = XOR(A, LOADU(IN +  0)); STOREU(OUT +  0, A); \
-    B = XOR(B, LOADU(IN + 16)); STOREU(OUT + 16, B); \
-    C = XOR(C, LOADL(IN + 32)); STOREL(OUT + 32, C); \
-} while(0)
-
-#define DECRYPT_BLOCK(A, B, C, D, IN, OUT)                      \
-do                                                              \
-{                                                               \
-    __m128i W0, W1, W2;                                         \
-    INJECT_DOMAIN_CONSTANT(A, B, C, D, PAYLOAD_TAG);            \
-    PERMUTE(A, B, C, D);                                        \
-    W0 = LOADU(IN +  0); STOREU(OUT +  0, XOR(A, W0)); A = W0;  \
-    W1 = LOADU(IN + 16); STOREU(OUT + 16, XOR(B, W1)); B = W1;  \
-    W2 = LOADL(IN + 32); STOREL(OUT + 32, XOR(C, W2)); C = BLEND(C, W2); \
-} while(0)
-
-#define DECRYPT_LASTBLOCK(A, B, C, D, IN, INLEN, OUT)      \
-do                                                         \
-{                                                          \
-    __m128i W0, W1, W2;                                    \
-    INJECT_DOMAIN_CONSTANT(A, B, C, D, PAYLOAD_TAG);       \
-    PERMUTE(A, B, C, D);                                   \
-    STOREU(lastblock +   0, A);                            \
-    STOREU(lastblock +  16, B);                            \
-    STOREL(lastblock +  32, C);                            \
-    block_copy(lastblock, IN, INLEN);                      \
-    lastblock[clen] ^= 0x01;                               \
-    lastblock[40-1] ^= 0x80;                               \
-    W0 = LOADU(lastblock +  0); STOREU(lastblock +  0, XOR(A, W0)); A = W0;  \
-    W1 = LOADU(lastblock + 16); STOREU(lastblock + 16, XOR(B, W1)); B = W1;  \
-    W2 = LOADL(lastblock + 32); STOREL(lastblock + 32, XOR(C, W2)); C = BLEND(C, W2); \
-    block_copy(OUT, lastblock, INLEN);                     \
-} while(0)
-
-#define INITIALIZE(A, B, C, D, N, K)                    \
-do                                                      \
-{                                                       \
-    A = _mm_set_epi32(U1, N >> 32, N&0xFFFFFFFF, U0);   \
-    B = K;                                              \
-    C = _mm_set_epi32(U5, U4, U3, U2);                  \
-    D = _mm_set_epi32(U9, U8, U7, U6);                  \
-    D = XOR(D, _mm_set_epi32(NORX_A, NORX_D, NORX_R, NORX_W)); \
-    PERMUTE(A, B, C, D);                                \
-} while(0)
-
-#define FINALIZE(A, B, C, D)                       \
+#define INJECT_DOMAIN_CONSTANT(S, TAG)             \
 do                                                 \
 {                                                  \
-    INJECT_DOMAIN_CONSTANT(A, B, C, D, FINAL_TAG); \
-    PERMUTE(A, B, C, D);                           \
-    PERMUTE(A, B, C, D);                           \
+    S[3] = XOR(S[3], _mm_set_epi32(TAG, 0, 0, 0)); \
 } while(0)
 
-#define PAD(BLOCK, BLOCKLEN, IN, INLEN) \
-do                                      \
-{                                       \
-    memset(BLOCK, 0, BLOCKLEN);         \
-    block_copy(BLOCK, IN, INLEN);       \
-    BLOCK[INLEN] = 0x01;                \
-    BLOCK[BLOCKLEN - 1] |= 0x80;        \
+#define ABSORB_BLOCK(S, IN, TAG)      \
+do                                    \
+{                                     \
+    INJECT_DOMAIN_CONSTANT(S, TAG);   \
+    PERMUTE(S);                       \
+    S[0] = XOR(S[0], LOADU(IN +  0)); \
+    S[1] = XOR(S[1], LOADU(IN + 16)); \
+    S[2] = XOR(S[2], LOADU(IN + 32)); \
 } while(0)
 
-/* inlen <= 40 */
-static void block_copy(unsigned char *out, const unsigned char *in, const size_t inlen)
+#define ABSORB_LASTBLOCK(S, IN, INLEN, TAG)           \
+do                                                    \
+{                                                     \
+    ALIGN(64) unsigned char lastblock[BYTES(NORX_R)]; \
+    PAD(lastblock, sizeof lastblock, IN, INLEN);      \
+    ABSORB_BLOCK(S, lastblock, TAG);                  \
+} while(0)
+
+#define ENCRYPT_BLOCK(S, OUT, IN)                             \
+do                                                            \
+{                                                             \
+    INJECT_DOMAIN_CONSTANT(S, PAYLOAD_TAG);                   \
+    PERMUTE(S);                                               \
+    S[0] = XOR(S[0], LOADU(IN +  0)); STOREU(OUT +  0, S[0]); \
+    S[1] = XOR(S[1], LOADU(IN + 16)); STOREU(OUT + 16, S[1]); \
+    S[2] = XOR(S[2], LOADU(IN + 32)); STOREU(OUT + 32, S[2]); \
+} while(0)
+
+#define ENCRYPT_LASTBLOCK(S, OUT, IN, INLEN)          \
+do                                                    \
+{                                                     \
+    ALIGN(64) unsigned char lastblock[BYTES(NORX_R)]; \
+    PAD(lastblock, sizeof lastblock, IN, INLEN);      \
+    ENCRYPT_BLOCK(S, lastblock, lastblock);           \
+    memcpy(OUT, lastblock, INLEN);                    \
+} while(0)
+
+#define DECRYPT_BLOCK(S, OUT, IN)                                          \
+do                                                                         \
+{                                                                          \
+    __m128i T[3];                                                          \
+    INJECT_DOMAIN_CONSTANT(S, PAYLOAD_TAG);                                \
+    PERMUTE(S);                                                            \
+    T[0] = LOADU(IN +  0); STOREU(OUT +  0, XOR(S[0], T[0])); S[0] = T[0]; \
+    T[1] = LOADU(IN + 16); STOREU(OUT + 16, XOR(S[1], T[1])); S[1] = T[1]; \
+    T[2] = LOADU(IN + 32); STOREU(OUT + 32, XOR(S[2], T[2])); S[2] = T[2]; \
+} while(0)
+
+#define DECRYPT_LASTBLOCK(S, OUT, IN, INLEN)                                           \
+do                                                                                     \
+{                                                                                      \
+    __m128i T[3];                                                                      \
+    ALIGN(64) unsigned char lastblock[BYTES(NORX_R)] = {0};                            \
+    INJECT_DOMAIN_CONSTANT(S, PAYLOAD_TAG);                                            \
+    PERMUTE(S);                                                                        \
+    STOREU(lastblock +   0, S[0]);                                                     \
+    STOREU(lastblock +  16, S[1]);                                                     \
+    STOREU(lastblock +  32, S[2]);                                                     \
+    memcpy(lastblock, IN, INLEN);                                                      \
+    lastblock[INLEN] ^= 0x01;                                                          \
+    lastblock[BYTES(NORX_R)-1] ^= 0x80;                                                \
+    T[0]= LOADU(lastblock +  0); STOREU(lastblock +  0, XOR(S[0], T[0])); S[0] = T[0]; \
+    T[1]= LOADU(lastblock + 16); STOREU(lastblock + 16, XOR(S[1], T[1])); S[1] = T[1]; \
+    T[2]= LOADU(lastblock + 32); STOREU(lastblock + 32, XOR(S[2], T[2])); S[2] = T[2]; \
+    memcpy(OUT, lastblock, INLEN);                                                     \
+} while(0)
+
+#define INITIALISE(S, NONCE, KEY)                                    \
+do                                                                   \
+{                                                                    \
+    uint64_t N;                                                      \
+    memcpy(&N, NONCE, sizeof N);                                     \
+    S[0] = _mm_set_epi32( U3,  U2, N >> 32, N&0xFFFFFFFF);           \
+    S[1] = LOADU(KEY);                                               \
+    S[2] = _mm_set_epi32(U11, U10,  U9,  U8);                        \
+    S[3] = _mm_set_epi32(U15, U14, U13, U12);                        \
+    S[3] = XOR(S[3], _mm_set_epi32(NORX_T, NORX_P, NORX_L, NORX_W)); \
+    PERMUTE(S);                                                      \
+} while(0)
+
+#define ABSORB_DATA(S, IN, INLEN, TAG)       \
+do                                           \
+{                                            \
+    if (INLEN > 0)                           \
+    {                                        \
+        size_t i = 0;                        \
+        size_t l = INLEN;                    \
+        while (l >= BYTES(NORX_R))           \
+        {                                    \
+            ABSORB_BLOCK(S, IN + i, TAG);    \
+            i += BYTES(NORX_R);              \
+            l -= BYTES(NORX_R);              \
+        }                                    \
+        ABSORB_LASTBLOCK(S, IN + i, l, TAG); \
+    }                                        \
+} while(0)
+
+#define ENCRYPT_DATA(S, OUT, IN, INLEN)           \
+do                                                \
+{                                                 \
+    if (INLEN > 0)                                \
+    {                                             \
+        size_t i = 0;                             \
+        size_t l = INLEN;                         \
+        while (l >= BYTES(NORX_R))                \
+        {                                         \
+            ENCRYPT_BLOCK(S, OUT + i, IN + i);    \
+            i += BYTES(NORX_R);                   \
+            l -= BYTES(NORX_R);                   \
+        }                                         \
+        ENCRYPT_LASTBLOCK(S, OUT + i, IN + i, l); \
+    }                                             \
+} while(0)
+
+#define DECRYPT_DATA(S, OUT, IN, INLEN)           \
+do                                                \
+{                                                 \
+    if (INLEN > 0)                                \
+    {                                             \
+        size_t i = 0;                             \
+        size_t l = INLEN;                         \
+        while (l >= BYTES(NORX_R))                \
+        {                                         \
+            DECRYPT_BLOCK(S, OUT + i, IN + i);    \
+            i += BYTES(NORX_R);                   \
+            l -= BYTES(NORX_R);                   \
+        }                                         \
+        DECRYPT_LASTBLOCK(S, OUT + i, IN + i, l); \
+    }                                             \
+} while(0)
+
+#define FINALISE(S)                       \
+do                                        \
+{                                         \
+    INJECT_DOMAIN_CONSTANT(S, FINAL_TAG); \
+    PERMUTE(S);                           \
+    PERMUTE(S);                           \
+} while(0)
+
+#define PAD(OUT, OUTLEN, IN, INLEN) \
+do                                  \
+{                                   \
+    memset(OUT, 0, OUTLEN);         \
+    memcpy(OUT, IN, INLEN);         \
+    OUT[INLEN] = 0x01;              \
+    OUT[OUTLEN - 1] |= 0x80;        \
+} while(0)
+
+typedef enum tag__
 {
-    if( inlen & 32 )
-    {
-        STOREU(out +  0, LOADU(in +  0));
-        STOREU(out + 16, LOADU(in + 16));
-        in += 32; out += 32;
-    }
-    if( inlen & 16 )
-    {
-        STOREU(out +  0, LOADU(in +  0));
-        in += 16; out += 16;
-    }
-    if( inlen & 8 )
-    {
-        memcpy(out, in, 8);
-        in += 8; out += 8;
-    }
-    if( inlen & 4 )
-    {
-        memcpy(out, in, 4);
-        in += 4; out += 4;
-    }
-    if( inlen & 2 )
-    {
-        memcpy(out, in, 2);
-        in += 2; out += 2;
-    }
-    if( inlen & 1 )
-    {
-        memcpy(out, in, 1);
-        in += 1; out += 1;
-    }
+    HEADER_TAG  = 0x01,
+    PAYLOAD_TAG = 0x02,
+    TRAILER_TAG = 0x04,
+    FINAL_TAG   = 0x08,
+    BRANCH_TAG  = 0x10,
+    MERGE_TAG   = 0x20
+} tag_t;
+
+void norx_aead_encrypt(
+  unsigned char *c, size_t *clen,
+  const unsigned char *a, size_t alen,
+  const unsigned char *m, size_t mlen,
+  const unsigned char *z, size_t zlen,
+  const unsigned char *nonce,
+  const unsigned char *key
+)
+{
+    __m128i S[4];
+
+    *clen = mlen + BYTES(NORX_T);
+    INITIALISE(S, nonce, key);
+    ABSORB_DATA(S, a, alen, HEADER_TAG);
+    ENCRYPT_DATA(S, c, m, mlen);
+    ABSORB_DATA(S, z, zlen, TRAILER_TAG);
+    FINALISE(S);
+    STOREU(c + mlen, S[0]);
 }
 
-int crypto_aead_encrypt(
-    unsigned char *c, unsigned long long *clen,
-    const unsigned char *m, unsigned long long mlen,
-    const unsigned char *ad, unsigned long long adlen,
-    const unsigned char *nsec,
-    const unsigned char *npub,
-    const unsigned char *k
-    )
+
+int norx_aead_decrypt(
+  unsigned char *m, size_t *mlen,
+  const unsigned char *a, size_t alen,
+  const unsigned char *c, size_t clen,
+  const unsigned char *z, size_t zlen,
+  const unsigned char *nonce,
+  const unsigned char *key
+)
 {
-    ALIGN(64) unsigned char lastblock[40];
-    __m128i A, B, C, D;
-    const uint64_t N  = *(const uint64_t *)npub;
-    const __m128i K   = LOADU(k +  0);
+    __m128i S[4];
 
-    *clen = mlen + NORX_A/8;
+    if (clen < BYTES(NORX_T)) { return -1; }
 
-    /* Initialization */
-    INITIALIZE(A, B, C, D, N, K);
+    *mlen = clen - BYTES(NORX_T);
 
-    /* Process header, if exists */
-    if( adlen > 0 )
-    {
-        while(adlen >= 40)
-        {
-            ABSORB_BLOCK(A, B, C, D, ad);
-            ad += 40; adlen -= 40;
-        }
-        PAD(lastblock, sizeof lastblock, ad, adlen);
-        ABSORB_BLOCK(A, B, C, D, lastblock);
-    }
-
-    /* Encrypt payload */
-    if(mlen > 0)
-    {
-        while( mlen >= 40 )
-        {
-            ENCRYPT_BLOCK(A, B, C, D, m, c);
-            mlen -= 40; m += 40; c += 40;
-        }
-        /* Handle last block */
-        PAD(lastblock, sizeof lastblock, m, mlen);
-        ENCRYPT_BLOCK(A, B, C, D, lastblock, lastblock);
-        block_copy(c, lastblock, mlen);
-        c += mlen;
-    }
-
-    /* No trailer in CAESAR API, ignore */
-
-    /* Finalize, and output tag */
-    FINALIZE(A, B, C, D);
-    STOREU(c +  0, A);
-    return 0;
-}
-
-
-int crypto_aead_decrypt(
-    unsigned char *m, unsigned long long *mlen,
-    unsigned char *nsec,
-    const unsigned char *c, unsigned long long clen,
-    const unsigned char *ad, unsigned long long adlen,
-    const unsigned char *npub,
-    const unsigned char *k
-    )
-{
-    ALIGN(64) unsigned char lastblock[40];
-    __m128i A, B, C, D;
-    const uint64_t N  = *(const uint64_t *)npub;
-    const __m128i  K  = LOADU(k +  0);
-
-    if(clen < NORX_A/8)
-        return -1;
-
-    clen -= NORX_A/8;
-    *mlen = clen;
-
-    /* Initialization */
-    INITIALIZE(A, B, C, D, N, K);
-
-    /* Process header, if exists */
-    if( adlen > 0 )
-    {
-        while(adlen >= 40)
-        {
-            ABSORB_BLOCK(A, B, C, D, ad);
-            ad += 40;
-            adlen -= 40;
-        }
-        PAD(lastblock, sizeof lastblock, ad, adlen);
-        ABSORB_BLOCK(A, B, C, D, lastblock);
-    }
-
-    /* Decrypt payload */
-    if(clen > 0)
-    {
-        while(clen >= 40)
-        {
-            DECRYPT_BLOCK(A, B, C, D, c, m);
-            c += 40; m += 40; clen -= 40;
-        }
-
-        /* Final block */
-        DECRYPT_LASTBLOCK(A, B, C, D, c, clen, m);
-        c += clen;
-    }
-
-    /* No trailer in CAESAR API, ignore */
-
-    /* Finalize, and output tag */
-    FINALIZE(A, B, C, D);
+    INITIALISE(S, nonce, key);
+    ABSORB_DATA(S, a, alen, HEADER_TAG);
+    DECRYPT_DATA(S, m, c, clen - BYTES(NORX_T));
+    ABSORB_DATA(S, z, zlen, TRAILER_TAG);
+    FINALISE(S);
 
     /* Verify tag */
-    A = _mm_cmpeq_epi8(A, LOADU(c +  0));
-    return (((unsigned long)_mm_movemask_epi8(A) + 1) >> 16) - 1;
+    S[0] = _mm_cmpeq_epi8(S[0], LOADU(c + clen - BYTES(NORX_T)));
+    return (((_mm_movemask_epi8(S[0]) & 0xFFFFU) + 1) >> 16) - 1;
 }
