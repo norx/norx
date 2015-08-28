@@ -487,6 +487,6 @@ int norx_aead_decrypt(
     /* Verify tag */
     S[0] = _mm_cmpeq_epi8(S[0], LOADU(c + clen - BYTES(NORX_T)  ));
     S[1] = _mm_cmpeq_epi8(S[1], LOADU(c + clen - BYTES(NORX_T)/2));
-    return _mm_movemask_epi8(AND(S[0], S[1])) == 0xFFFF ? 0 : -1;
+    return (((_mm_movemask_epi8(AND(S[0], S[1])) & 0xFFFFUL) + 1) >> 16) - 1;
 }
 

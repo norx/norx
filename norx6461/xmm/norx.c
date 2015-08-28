@@ -16,9 +16,13 @@
 #include "norx.h"
 
 #if defined(_MSC_VER)
-    #include <intrin.h>
+  #include <intrin.h>
 #else
+  #if defined(__XOP__)
     #include <x86intrin.h>
+  #else
+    #include <immintrin.h>
+  #endif
 #endif
 
 const char * norx_version = "2.0";
@@ -69,16 +73,23 @@ const char * norx_version = "2.0";
 #define AND(A, B) _mm_and_si128((A), (B))
 #define ADD(A, B) _mm_add_epi64((A), (B))
 
-#define U0 0xE4D324772B91DF79ULL
-#define U1 0x3AEC9ABAAEB02CCBULL
-#define U2 0x9DFBA13DB4289311ULL
-#define U3 0xEF9EB4BF5A97F2C8ULL
-#define U4 0x3F466E92C1532034ULL
-#define U5 0xE6E986626CC405C1ULL
-#define U6 0xACE40F3B549184E1ULL
-#define U7 0xD9CFD35762614477ULL
-#define U8 0xB15E641748DE5E6BULL
-#define U9 0xAA95E955E10F8410ULL
+#define  U0 0xE4D324772B91DF79ULL
+#define  U1 0x3AEC9ABAAEB02CCBULL
+#define  U2 0x9DFBA13DB4289311ULL
+#define  U3 0xEF9EB4BF5A97F2C8ULL
+#define  U4 0x3F466E92C1532034ULL
+#define  U5 0xE6E986626CC405C1ULL
+#define  U6 0xACE40F3B549184E1ULL
+#define  U7 0xD9CFD35762614477ULL
+#define  U8 0xB15E641748DE5E6BULL
+#define  U9 0xAA95E955E10F8410ULL
+#define U10 0x28D1034441A9DD40ULL
+#define U11 0x7F31BBF964E93BF5ULL
+#define U12 0xB5E9E22493DFFB96ULL
+#define U13 0xB980C852479FAFBDULL
+#define U14 0xDA24516BF55EAFD4ULL
+#define U15 0x86026AE8536F1501ULL
+
 
 #define R0  8
 #define R1 19
@@ -87,43 +98,43 @@ const char * norx_version = "2.0";
 
 /* Implementation */
 #if defined(TWEAK_LOW_LATENCY)
-	#define G(S)                                           \
-	do                                                     \
-	{                                                      \
-	    __m128i L[2], R[2];                                \
-	                                                       \
-	    L[0] = XOR(S[0], S[2]);    R[0] = XOR(S[1], S[3]); \
-	    L[1] = AND(S[0], S[2]);    R[1] = AND(S[1], S[3]); \
-	    L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
-	    S[0] = XOR(L[0], L[1]);    S[1] = XOR(R[0], R[1]); \
-	    S[6] = XOR(S[6], L[0]);    S[7] = XOR(S[7], R[0]); \
-	    S[6] = XOR(S[6], L[1]);    S[7] = XOR(S[7], R[1]); \
-	    S[6] = ROT(S[6], R0);      S[7] = ROT(S[7], R0);   \
-	                                                       \
-	    L[0] = XOR(S[4], S[6]);    R[0] = XOR(S[5], S[7]); \
-	    L[1] = AND(S[4], S[6]);    R[1] = AND(S[5], S[7]); \
-	    L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
-	    S[4] = XOR(L[0], L[1]);    S[5] = XOR(R[0], R[1]); \
-	    S[2] = XOR(S[2], L[0]);    S[3] = XOR(S[3], R[0]); \
-	    S[2] = XOR(S[2], L[1]);    S[3] = XOR(S[3], R[1]); \
-	    S[2] = ROT(S[2], R1);      S[3] = ROT(S[3], R1);   \
-	                                                       \
-	    L[0] = XOR(S[0], S[2]);    R[0] = XOR(S[1], S[3]); \
-	    L[1] = AND(S[0], S[2]);    R[1] = AND(S[1], S[3]); \
-	    L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
-	    S[0] = XOR(L[0], L[1]);    S[1] = XOR(R[0], R[1]); \
-	    S[6] = XOR(S[6], L[0]);    S[7] = XOR(S[7], R[0]); \
-	    S[6] = XOR(S[6], L[1]);    S[7] = XOR(S[7], R[1]); \
-	    S[6] = ROT(S[6], R2);      S[7] = ROT(S[7], R2);   \
-	                                                       \
-	    L[0] = XOR(S[4], S[6]);    R[0] = XOR(S[5], S[7]); \
-	    L[1] = AND(S[4], S[6]);    R[1] = AND(S[5], S[7]); \
-	    L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
-	    S[4] = XOR(L[0], L[1]);    S[5] = XOR(R[0], R[1]); \
-	    S[2] = XOR(S[2], L[0]);    S[3] = XOR(S[3], R[0]); \
-	    S[2] = XOR(S[2], L[1]);    S[3] = XOR(S[3], R[1]); \
-	    S[2] = ROT(S[2], R3);      S[3] = ROT(S[3], R3);   \
-	} while(0)
+  #define G(S)                                           \
+  do                                                     \
+  {                                                      \
+      __m128i L[2], R[2];                                \
+                                                         \
+      L[0] = XOR(S[0], S[2]);    R[0] = XOR(S[1], S[3]); \
+      L[1] = AND(S[0], S[2]);    R[1] = AND(S[1], S[3]); \
+      L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
+      S[0] = XOR(L[0], L[1]);    S[1] = XOR(R[0], R[1]); \
+      S[6] = XOR(S[6], L[0]);    S[7] = XOR(S[7], R[0]); \
+      S[6] = XOR(S[6], L[1]);    S[7] = XOR(S[7], R[1]); \
+      S[6] = ROT(S[6], R0);      S[7] = ROT(S[7], R0);   \
+                                                         \
+      L[0] = XOR(S[4], S[6]);    R[0] = XOR(S[5], S[7]); \
+      L[1] = AND(S[4], S[6]);    R[1] = AND(S[5], S[7]); \
+      L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
+      S[4] = XOR(L[0], L[1]);    S[5] = XOR(R[0], R[1]); \
+      S[2] = XOR(S[2], L[0]);    S[3] = XOR(S[3], R[0]); \
+      S[2] = XOR(S[2], L[1]);    S[3] = XOR(S[3], R[1]); \
+      S[2] = ROT(S[2], R1);      S[3] = ROT(S[3], R1);   \
+                                                         \
+      L[0] = XOR(S[0], S[2]);    R[0] = XOR(S[1], S[3]); \
+      L[1] = AND(S[0], S[2]);    R[1] = AND(S[1], S[3]); \
+      L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
+      S[0] = XOR(L[0], L[1]);    S[1] = XOR(R[0], R[1]); \
+      S[6] = XOR(S[6], L[0]);    S[7] = XOR(S[7], R[0]); \
+      S[6] = XOR(S[6], L[1]);    S[7] = XOR(S[7], R[1]); \
+      S[6] = ROT(S[6], R2);      S[7] = ROT(S[7], R2);   \
+                                                         \
+      L[0] = XOR(S[4], S[6]);    R[0] = XOR(S[5], S[7]); \
+      L[1] = AND(S[4], S[6]);    R[1] = AND(S[5], S[7]); \
+      L[1] = ADD(L[1], L[1]);    R[1] = ADD(R[1], R[1]); \
+      S[4] = XOR(L[0], L[1]);    S[5] = XOR(R[0], R[1]); \
+      S[2] = XOR(S[2], L[0]);    S[3] = XOR(S[3], R[0]); \
+      S[2] = XOR(S[2], L[1]);    S[3] = XOR(S[3], R[1]); \
+      S[2] = ROT(S[2], R3);      S[3] = ROT(S[3], R3);   \
+  } while(0)
 #else
     #define G(S)                                           \
     do                                                     \
@@ -316,7 +327,7 @@ do                                                         \
 do                                                               \
 {                                                                \
     size_t j;                                                    \
-    ALIGN(64) unsigned char lastblock[BYTES(NORX_R)];            \
+    ALIGN(64) unsigned char lastblock[BYTES(NORX_R)] = {0};      \
     INJECT_DOMAIN_CONSTANT(S, PAYLOAD_TAG);                      \
     PERMUTE(S);                                                  \
     for (j = 0; j < WORDS(NORX_R)/2; ++j)                        \
@@ -339,13 +350,13 @@ do                                                               \
 do                                                    \
 {                                                     \
     S[0] = LOADU(NONCE);                              \
-    S[1] = _mm_set_epi64x(U1, U0);                    \
+    S[1] = _mm_set_epi64x( U3,  U2);                    \
     S[2] = LOADU(KEY + 0 * 2 * BYTES(NORX_W));        \
     S[3] = LOADU(KEY + 1 * 2 * BYTES(NORX_W));        \
-    S[4] = _mm_set_epi64x(U3, U2);                    \
-    S[5] = _mm_set_epi64x(U5, U4);                    \
-    S[6] = _mm_set_epi64x(U7, U6);                    \
-    S[7] = _mm_set_epi64x(U9, U8);                    \
+    S[4] = _mm_set_epi64x( U9,  U8);                  \
+    S[5] = _mm_set_epi64x(U11, U10);                  \
+    S[6] = _mm_set_epi64x(U13, U12);                  \
+    S[7] = _mm_set_epi64x(U15, U14);                  \
     S[6] = XOR(S[6], _mm_set_epi64x(NORX_L, NORX_W)); \
     S[7] = XOR(S[7], _mm_set_epi64x(NORX_T, NORX_P)); \
     PERMUTE(S);                                       \
@@ -447,8 +458,8 @@ void norx_aead_encrypt(
     ENCRYPT_DATA(S, c, m, mlen);
     ABSORB_DATA(S, z, zlen, TRAILER_TAG);
     FINALISE(S);
-    STOREU(c + mlen +  0, S[0]);
-    STOREU(c + mlen + 16, S[1]);
+    STOREU(c + mlen,                   S[0]);
+    STOREU(c + mlen + BYTES(NORX_T)/2, S[1]);
 }
 
 
@@ -476,6 +487,6 @@ int norx_aead_decrypt(
     /* Verify tag */
     S[0] = _mm_cmpeq_epi8(S[0], LOADU(c + clen - BYTES(NORX_T)  ));
     S[1] = _mm_cmpeq_epi8(S[1], LOADU(c + clen - BYTES(NORX_T)/2));
-    return (((unsigned long)_mm_movemask_epi8(AND(S[0], S[1])) + 1) >> 16) - 1;
+    return (((_mm_movemask_epi8(AND(S[0], S[1])) & 0xFFFFUL) + 1) >> 16) - 1;
 }
 
