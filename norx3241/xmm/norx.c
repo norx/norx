@@ -16,9 +16,13 @@
 #include "norx.h"
 
 #if defined(_MSC_VER)
-    #include <intrin.h>
+  #include <intrin.h>
 #else
+  #if defined(__XOP__)
     #include <x86intrin.h>
+  #else
+    #include <immintrin.h>
+  #endif
 #endif
 
 const char * norx_version = "2.0";
@@ -79,16 +83,22 @@ const char * norx_version = "2.0";
 #define AND(A, B) _mm_and_si128((A), (B))
 #define ADD(A, B) _mm_add_epi32((A), (B))
 
-#define U0 0x0454EDABUL
-#define U1 0xAC6851CCUL
-#define U2 0xB707322FUL
-#define U3 0xA0C7C90DUL
-#define U4 0x99AB09ACUL
-#define U5 0xA643466DUL
-#define U6 0x21C22362UL
-#define U7 0x1230C950UL
-#define U8 0xA3D8D930UL
-#define U9 0x3FA8B72CUL
+#define  U0 0x0454EDABU
+#define  U1 0xAC6851CCU
+#define  U2 0xB707322FU
+#define  U3 0xA0C7C90DU
+#define  U4 0x99AB09ACU
+#define  U5 0xA643466DU
+#define  U6 0x21C22362U
+#define  U7 0x1230C950U
+#define  U8 0xA3D8D930U
+#define  U9 0x3FA8B72CU
+#define U10 0xED84EB49U
+#define U11 0xEDCA4787U
+#define U12 0x335463EBU
+#define U13 0xF994220BU
+#define U14 0xBE0BF5C9U
+#define U15 0xD7C49104U
 
 #define R0  8
 #define R1 11
@@ -97,77 +107,77 @@ const char * norx_version = "2.0";
 
 /* Implementation */
 #if defined(TWEAK_LOW_LATENCY)
-	#define G(S)                \
-	do                          \
-	{                           \
-	    __m128i T[2];           \
-	                            \
-	    T[0] = XOR(S[0], S[1]); \
-	    T[1] = AND(S[0], S[1]); \
-	    T[1] = ADD(T[1], T[1]); \
-	    S[0] = XOR(T[0], T[1]); \
-	    S[3] = XOR(S[3], T[0]); \
-	    S[3] = XOR(S[3], T[1]); \
-	    S[3] = ROT(S[3],   R0); \
-	                            \
-	    T[0] = XOR(S[2], S[3]); \
-	    T[1] = AND(S[2], S[3]); \
-	    T[1] = ADD(T[1], T[1]); \
-	    S[2] = XOR(T[0], T[1]); \
-	    S[1] = XOR(S[1], T[0]); \
-	    S[1] = XOR(S[1], T[1]); \
-	    S[1] = ROT(S[1],   R1); \
-	                            \
-	    T[0] = XOR(S[0], S[1]); \
-	    T[1] = AND(S[0], S[1]); \
-	    T[1] = ADD(T[1], T[1]); \
-	    S[0] = XOR(T[0], T[1]); \
-	    S[3] = XOR(S[3], T[0]); \
-	    S[3] = XOR(S[3], T[1]); \
-	    S[3] = ROT(S[3],   R2); \
-	                            \
-	    T[0] = XOR(S[2], S[3]); \
-	    T[1] = AND(S[2], S[3]); \
-	    T[1] = ADD(T[1], T[1]); \
-	    S[2] = XOR(T[0], T[1]); \
-	    S[1] = XOR(S[1], T[0]); \
-	    S[1] = XOR(S[1], T[1]); \
-	    S[1] = ROT(S[1],   R3); \
-	} while(0)
+  #define G(S)                \
+  do                          \
+  {                           \
+      __m128i T[2];           \
+                              \
+      T[0] = XOR(S[0], S[1]); \
+      T[1] = AND(S[0], S[1]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[0] = XOR(T[0], T[1]); \
+      S[3] = XOR(S[3], T[0]); \
+      S[3] = XOR(S[3], T[1]); \
+      S[3] = ROT(S[3],   R0); \
+                              \
+      T[0] = XOR(S[2], S[3]); \
+      T[1] = AND(S[2], S[3]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[2] = XOR(T[0], T[1]); \
+      S[1] = XOR(S[1], T[0]); \
+      S[1] = XOR(S[1], T[1]); \
+      S[1] = ROT(S[1],   R1); \
+                              \
+      T[0] = XOR(S[0], S[1]); \
+      T[1] = AND(S[0], S[1]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[0] = XOR(T[0], T[1]); \
+      S[3] = XOR(S[3], T[0]); \
+      S[3] = XOR(S[3], T[1]); \
+      S[3] = ROT(S[3],   R2); \
+                              \
+      T[0] = XOR(S[2], S[3]); \
+      T[1] = AND(S[2], S[3]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[2] = XOR(T[0], T[1]); \
+      S[1] = XOR(S[1], T[0]); \
+      S[1] = XOR(S[1], T[1]); \
+      S[1] = ROT(S[1],   R3); \
+  } while(0)
 #else
-	#define G(S)                \
-	do                          \
-	{                           \
-	    __m128i T[2];           \
-	                            \
-	    T[0] = XOR(S[0], S[1]); \
-	    T[1] = AND(S[0], S[1]); \
-	    T[1] = ADD(T[1], T[1]); \
-	    S[0] = XOR(T[0], T[1]); \
-	    S[3] = XOR(S[3], S[0]); \
-	    S[3] = ROT(S[3],   R0); \
-	                            \
-	    T[0] = XOR(S[2], S[3]); \
-	    T[1] = AND(S[2], S[3]); \
-	    T[1] = ADD(T[1], T[1]); \
-	    S[2] = XOR(T[0], T[1]); \
-	    S[1] = XOR(S[1], S[2]); \
-	    S[1] = ROT(S[1],   R1); \
-	                            \
-	    T[0] = XOR(S[0], S[1]); \
-	    T[1] = AND(S[0], S[1]); \
-	    T[1] = ADD(T[1], T[1]); \
-	    S[0] = XOR(T[0], T[1]); \
-	    S[3] = XOR(S[3], S[0]); \
-	    S[3] = ROT(S[3],   R2); \
-	                            \
-	    T[0] = XOR(S[2], S[3]); \
-	    T[1] = AND(S[2], S[3]); \
-	    T[1] = ADD(T[1], T[1]); \
-	    S[2] = XOR(T[0], T[1]); \
-	    S[1] = XOR(S[1], S[2]); \
-	    S[1] = ROT(S[1],   R3); \
-	} while(0)
+  #define G(S)                \
+  do                          \
+  {                           \
+      __m128i T[2];           \
+                              \
+      T[0] = XOR(S[0], S[1]); \
+      T[1] = AND(S[0], S[1]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[0] = XOR(T[0], T[1]); \
+      S[3] = XOR(S[3], S[0]); \
+      S[3] = ROT(S[3],   R0); \
+                              \
+      T[0] = XOR(S[2], S[3]); \
+      T[1] = AND(S[2], S[3]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[2] = XOR(T[0], T[1]); \
+      S[1] = XOR(S[1], S[2]); \
+      S[1] = ROT(S[1],   R1); \
+                              \
+      T[0] = XOR(S[0], S[1]); \
+      T[1] = AND(S[0], S[1]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[0] = XOR(T[0], T[1]); \
+      S[3] = XOR(S[3], S[0]); \
+      S[3] = ROT(S[3],   R2); \
+                              \
+      T[0] = XOR(S[2], S[3]); \
+      T[1] = AND(S[2], S[3]); \
+      T[1] = ADD(T[1], T[1]); \
+      S[2] = XOR(T[0], T[1]); \
+      S[1] = XOR(S[1], S[2]); \
+      S[1] = ROT(S[1],   R3); \
+  } while(0)
 #endif
 
 #define DIAGONALIZE(S)                                    \
@@ -281,11 +291,12 @@ do                                                                              
 #define INITIALISE(S, NONCE, KEY)                                    \
 do                                                                   \
 {                                                                    \
-    const uint64_t N  = *(const uint64_t *)NONCE;                    \
-    S[0] = _mm_set_epi32(U1, U0, N >> 32, N&0xFFFFFFFF);             \
+    uint64_t N;                                                      \
+    memcpy(&N, NONCE, sizeof N);                                     \
+    S[0] = _mm_set_epi32( U3,  U2, N >> 32, N&0xFFFFFFFF);           \
     S[1] = LOADU(KEY);                                               \
-    S[2] = _mm_set_epi32(U5, U4, U3, U2);                            \
-    S[3] = _mm_set_epi32(U9, U8, U7, U6);                            \
+    S[2] = _mm_set_epi32(U11, U10,  U9,  U8);                        \
+    S[3] = _mm_set_epi32(U15, U14, U13, U12);                        \
     S[3] = XOR(S[3], _mm_set_epi32(NORX_T, NORX_P, NORX_L, NORX_W)); \
     PERMUTE(S);                                                      \
 } while(0)
