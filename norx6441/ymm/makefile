@@ -8,6 +8,6 @@ bench:
 	@rm bench
 
 check:
-	@$(CC) $(CFLAGS) -I. -o check ../../check/check.c norx.c
+	@$(CC) $(CFLAGS) -I.. -o check ../../check/check.c norx.c
 	@./check
 	@rm check
