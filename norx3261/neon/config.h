@@ -11,8 +11,8 @@
    this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 */
 #define NORX_W  32
-#define NORX_R   6
-#define NORX_D   1
-#define NORX_A 128
+#define NORX_L   6
+#define NORX_P   1
+#define NORX_T 128
 
 #define TWEAK_LOW_LATENCY
