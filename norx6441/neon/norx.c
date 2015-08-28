@@ -14,7 +14,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <arm_neon.h>
-
 #include "norx.h"
 
 const char * norx_version = "2.0";

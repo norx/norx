@@ -272,21 +272,19 @@ do                                                                          \
     memcpy(OUT, lastblock, INLEN);                                          \
 } while(0)
 
-#define INITIALISE(A, B, C, D, N, K)                               \
-do                                                                 \
-{                                                                  \
-    uint64_t N_;                                                   \
-    memcpy(&N_, N, sizeof N_);                                     \
-    const uint32x4_t A_ = SETV(N_ & 0xFFFFFFFF, N_ >> 32, U2, U3); \
-    const uint32x4_t C_ = SETV( U8,  U9, U10, U11);                \
-    const uint32x4_t D_ = SETV(U12, U13, U14, U15);                \
-    const uint32x4_t P_ = SETV(NORX_W, NORX_L, NORX_P, NORX_T);    \
-    A = A_;                                                        \
-    B = LOADU(K);                                                  \
-    C = C_;                                                        \
-    D = D_;                                                        \
-    D = XOR(D, P_);                                                \
-    PERMUTE(A, B, C, D);                                           \
+#define INITIALISE(A, B, C, D, N, K)                             \
+do                                                               \
+{                                                                \
+    const uint32x4_t A_ = SETV(N & 0xFFFFFFFF, N >> 32, U2, U3); \
+    const uint32x4_t C_ = SETV( U8,  U9, U10, U11);              \
+    const uint32x4_t D_ = SETV(U12, U13, U14, U15);              \
+    const uint32x4_t P_ = SETV(NORX_W, NORX_L, NORX_P, NORX_T);  \
+    A = A_;                                                      \
+    B = LOADU(K);                                                \
+    C = C_;                                                      \
+    D = D_;                                                      \
+    D = XOR(D, P_);                                              \
+    PERMUTE(A, B, C, D);                                         \
 } while(0)
 
 #define ABSORB_DATA(A, B, C, D, IN, INLEN, TAG)       \
@@ -377,9 +375,11 @@ void norx_aead_encrypt(
 )
 {
     uint32x4_t A, B, C, D;
+    uint64_t N;
 
+    memcpy(&N, nonce, sizeof N);
     *clen = mlen + BYTES(NORX_T);
-    INITIALISE(A, B, C, D, nonce, key);
+    INITIALISE(A, B, C, D, N, key);
     ABSORB_DATA(A, B, C, D, a, alen, HEADER_TAG);
     ENCRYPT_DATA(A, B, C, D, c, m, mlen);
     ABSORB_DATA(A, B, C, D, z, zlen, TRAILER_TAG);
@@ -398,11 +398,13 @@ int norx_aead_decrypt(
 )
 {
     uint32x4_t A, B, C, D;
+    uint64_t N;
 
     if(clen < BYTES(NORX_T)) { return -1; }
 
+    memcpy(&N, nonce, sizeof N);
     *mlen = clen - BYTES(NORX_T);
-    INITIALISE(A, B, C, D, nonce, key);
+    INITIALISE(A, B, C, D, N, key);
     ABSORB_DATA(A, B, C, D, a, alen, HEADER_TAG);
     DECRYPT_DATA(A, B, C, D, m, c, clen - BYTES(NORX_T));
     ABSORB_DATA(A, B, C, D, z, zlen, TRAILER_TAG);

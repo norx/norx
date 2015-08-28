@@ -1,4 +1,4 @@
-CFLAGS=-O3 -mcpu=cortex-a8 -mfpu=neon -std=c99 -Wall -pedantic -Wno-long-long
+CFLAGS=-O3 -mcpu=cortex-a8 -mfpu=neon -std=c89 -Wall -pedantic -Wno-long-long
 
 all: check bench
 
@@ -13,7 +13,7 @@ bench:
 	@rm bench
 
 check:
-	@$(CC) $(CFLAGS) -I.. -o check ../../utils/check.c norx.c caesar.c
+	@$(CC) $(CFLAGS) -I../ -o check ../../utils/check.c norx.c caesar.c
 	@./check
 	@rm check
 

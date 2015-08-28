@@ -1,4 +1,4 @@
-CFLAGS=-O3 -mcpu=cortex-a8 -mfpu=neon -std=c99 -Wall -pedantic -Wno-long-long
+CFLAGS=-O3 -mcpu=cortex-a8 -mfpu=neon -std=c89 -Wall -pedantic -Wno-long-long
 
 all: check bench
 

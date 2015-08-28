@@ -1,4 +1,3 @@
-CC=gcc
 CFLAGS=-O3 -std=c89 -Wall -Wextra -pedantic -Wno-long-long
 
 all: check bench
