@@ -21,9 +21,13 @@
 #include <string.h>
 
 #if defined(_MSC_VER)
-    #include <intrin.h>
+  #include <intrin.h>
 #else
+  #if defined(__XOP__)
     #include <x86intrin.h>
+  #else
+    #include <immintrin.h>
+  #endif
 #endif
 
 typedef enum tag__
@@ -41,6 +45,9 @@ typedef enum tag__
 #else
     #define ALIGN(x) __attribute__((aligned(x)))
 #endif
+
+#define BYTES(x) (((x) + 7) / 8)
+#define WORDS(x) (((x) + (NORX_W-1)) / NORX_W)
 
 #define LOAD(in) _mm256_load_si256((__m256i*)(in))
 #define STORE(out, x) _mm256_store_si256((__m256i*)(out), (x))
@@ -71,16 +78,26 @@ typedef enum tag__
 #define AND128(A, B) _mm_and_si128((A), (B))
 #define ADD128(A, B) _mm_add_epi64((A), (B))
 
-#define U0 0x243F6A8885A308D3ULL
-#define U1 0x13198A2E03707344ULL
-#define U2 0xA4093822299F31D0ULL
-#define U3 0x082EFA98EC4E6C89ULL
-#define U4 0xAE8858DC339325A1ULL
-#define U5 0x670A134EE52D7FA6ULL
-#define U6 0xC4316D80CD967541ULL
-#define U7 0xD21DFBF8B630B762ULL
-#define U8 0x375A18D261E7F892ULL
-#define U9 0x343D1F187D92285BULL
+#define NORX_B (NORX_W * 16)     /* permutation width */
+#define NORX_C (NORX_W *  4)     /* capacity */
+#define NORX_R (NORX_B - NORX_C) /* rate */
+
+#define  U0 0xE4D324772B91DF79ULL
+#define  U1 0x3AEC9ABAAEB02CCBULL
+#define  U2 0x9DFBA13DB4289311ULL
+#define  U3 0xEF9EB4BF5A97F2C8ULL
+#define  U4 0x3F466E92C1532034ULL
+#define  U5 0xE6E986626CC405C1ULL
+#define  U6 0xACE40F3B549184E1ULL
+#define  U7 0xD9CFD35762614477ULL
+#define  U8 0xB15E641748DE5E6BULL
+#define  U9 0xAA95E955E10F8410ULL
+#define U10 0x28D1034441A9DD40ULL
+#define U11 0x7F31BBF964E93BF5ULL
+#define U12 0xB5E9E22493DFFB96ULL
+#define U13 0xB980C852479FAFBDULL
+#define U14 0xDA24516BF55EAFD4ULL
+#define U15 0x86026AE8536F1501ULL
 
 #define R0  8
 #define R1 19
@@ -127,39 +144,39 @@ typedef enum tag__
          B = ROT( B, R3);   \
     } while(0)
 #else
-	#define G(A, B, C, D)   \
-	do                      \
-	{                       \
-	    __m256i t0, t1;     \
-	                        \
-	    t0 = XOR( A,  B);   \
-	    t1 = AND( A,  B);   \
-	    t1 = ADD(t1, t1);   \
-	     A = XOR(t0, t1);   \
-	     D = XOR( D,  A);   \
-	     D = ROT( D, R0);   \
-	                        \
-	    t0 = XOR( C,  D);   \
-	    t1 = AND( C,  D);   \
-	    t1 = ADD(t1, t1);   \
-	     C = XOR(t0, t1);   \
-	     B = XOR( B,  C);   \
-	     B = ROT( B, R1);   \
-	                        \
-	    t0 = XOR( A,  B);   \
-	    t1 = AND( A,  B);   \
-	    t1 = ADD(t1, t1);   \
-	     A = XOR(t0, t1);   \
-	     D = XOR( D,  A);   \
-	     D = ROT( D, R2);   \
-	                        \
-	    t0 = XOR( C,  D);   \
-	    t1 = AND( C,  D);   \
-	    t1 = ADD(t1, t1);   \
-	     C = XOR(t0, t1);   \
-	     B = XOR( B,  C);   \
-	     B = ROT( B, R3);   \
-	} while(0)
+  #define G(A, B, C, D)   \
+  do                      \
+  {                       \
+      __m256i t0, t1;     \
+                          \
+      t0 = XOR( A,  B);   \
+      t1 = AND( A,  B);   \
+      t1 = ADD(t1, t1);   \
+       A = XOR(t0, t1);   \
+       D = XOR( D,  A);   \
+       D = ROT( D, R0);   \
+                          \
+      t0 = XOR( C,  D);   \
+      t1 = AND( C,  D);   \
+      t1 = ADD(t1, t1);   \
+       C = XOR(t0, t1);   \
+       B = XOR( B,  C);   \
+       B = ROT( B, R1);   \
+                          \
+      t0 = XOR( A,  B);   \
+      t1 = AND( A,  B);   \
+      t1 = ADD(t1, t1);   \
+       A = XOR(t0, t1);   \
+       D = XOR( D,  A);   \
+       D = ROT( D, R2);   \
+                          \
+      t0 = XOR( C,  D);   \
+      t1 = AND( C,  D);   \
+      t1 = ADD(t1, t1);   \
+       C = XOR(t0, t1);   \
+       B = XOR( B,  C);   \
+       B = ROT( B, R3);   \
+  } while(0)
 #endif
 
 
@@ -194,7 +211,7 @@ do                            \
 do                               \
 {                                \
     int i;                       \
-    for(i = 0; i < NORX_R; ++i)  \
+    for(i = 0; i < NORX_L; ++i)  \
     {                            \
         F(A, B, C, D);           \
     }                            \
@@ -214,7 +231,7 @@ do                                                  \
     PERMUTE(A, B, C, D);                            \
     A = XOR(A, LOADU(BLOCK +  0));                  \
     B = XOR(B, LOADU(BLOCK + 32));                  \
-    C = XOR(C, TO256(LOADU128(BLOCK + 64)));        \
+    C = XOR(C, LOADU(BLOCK + 64));                  \
 } while(0)
 
 #define ENCRYPT_BLOCK(A, B, C, D, IN, OUT)            \
@@ -224,8 +241,7 @@ do                                                    \
     PERMUTE(A, B, C, D);                              \
     A = XOR(A, LOADU(IN +  0)); STOREU(OUT +  0, A);  \
     B = XOR(B, LOADU(IN + 32)); STOREU(OUT + 32, B);  \
-    C = XOR(C, TO256(LOADU128(IN + 64)));             \
-    STOREU128(OUT + 64, TO128(C));                    \
+    C = XOR(C, LOADU(IN + 64)); STOREU(OUT + 64, C);  \
 } while(0)
 
 #define DECRYPT_BLOCK(A, B, C, D, IN, OUT)                        \
@@ -236,9 +252,7 @@ do                                                                \
     PERMUTE(A, B, C, D);                                          \
     W0 = LOADU(IN +  0); STOREU(OUT +  0, XOR(A, W0)); A = W0;    \
     W1 = LOADU(IN + 32); STOREU(OUT + 32, XOR(B, W1)); B = W1;    \
-    W2 = TO256(LOADU128(IN + 64));                                \
-    STOREU128(OUT + 64, TO128(XOR(C, W2)));                       \
-    C = _mm256_blend_epi32(C, W2, 0x0F);                          \
+    W2 = LOADU(IN + 64); STOREU(OUT + 64, XOR(C, W2)); C = W2;    \
 } while(0)
 
 #define DECRYPT_LASTBLOCK(A, B, C, D, IN, INLEN, OUT)                          \
@@ -249,28 +263,25 @@ do                                                                             \
     PERMUTE(A, B, C, D);                                                       \
     STOREU(lastblock +   0, A);                                                \
     STOREU(lastblock +  32, B);                                                \
-    STOREU128(lastblock +  64, TO128(C));                                      \
+    STOREU(lastblock +  64, C);                                                \
     block_copy(lastblock, IN, INLEN);                                          \
     lastblock[clen] ^= 0x01;                                                   \
-    lastblock[80-1] ^= 0x80;                                                   \
+    lastblock[BYTES(NORX_R)-1] ^= 0x80;                                        \
     W0 = LOADU(lastblock +  0); STOREU(lastblock +  0, XOR(A, W0)); A = W0;    \
     W1 = LOADU(lastblock + 32); STOREU(lastblock + 32, XOR(B, W1)); B = W1;    \
-    W2 = TO256(LOADU128(lastblock + 64));                                      \
-    STOREU128(lastblock + 64, TO128(XOR(C, W2)));                              \
-    C = _mm256_blend_epi32(C, W2, 0x0F);                                       \
+    W2 = LOADU(lastblock + 64); STOREU(lastblock + 64, XOR(C, W2)); C = W2;    \
     block_copy(OUT, lastblock, INLEN);                                         \
 } while(0)
 
 #define INITIALIZE(A, B, C, D, N, K)                                        \
 do                                                                          \
 {                                                                           \
-    A = _mm256_castsi128_si256(N);                                          \
-    A = _mm256_inserti128_si256(A, _mm_set_epi64x(U1, U0), 1);              \
-    A = _mm256_permute4x64_epi64(A, _MM_SHUFFLE(3, 1, 0, 2));               \
+    A = _mm256_blend_epi32(_mm256_set_epi64x(U3, U2, 0, 0),                 \
+                           _mm256_castsi128_si256(N), 0x0F);                \
     B = K;                                                                  \
-    C = _mm256_set_epi64x(U5, U4, U3, U2);                                  \
-    D = _mm256_set_epi64x(U9, U8, U7, U6);                                  \
-    D = XOR(D, _mm256_set_epi64x(NORX_A, NORX_D, NORX_R, NORX_W));          \
+    C = _mm256_set_epi64x(U11, U10,  U9,  U8);                              \
+    D = _mm256_set_epi64x(U15, U14, U13, U12);                              \
+    D = XOR(D, _mm256_set_epi64x(NORX_T, NORX_P, NORX_L, NORX_W));          \
     PERMUTE(A, B, C, D);                                                    \
 } while(0)
 
@@ -291,7 +302,7 @@ do                                      \
     BLOCK[BLOCKLEN - 1] |= 0x80;        \
 } while(0)
 
-/* inlen <= 80 */
+/* inlen <= BYTES(NORX_R) */
 static void block_copy(unsigned char *out, const unsigned char *in, const size_t inlen)
 {
     if( inlen & 64 )
@@ -341,12 +352,12 @@ int crypto_aead_encrypt(
     const unsigned char *k
     )
 {
-    ALIGN(64) unsigned char lastblock[80];
+    ALIGN(64) unsigned char lastblock[BYTES(NORX_R)];
     __m256i A, B, C, D;
     const __m128i N  = LOADU128(npub);
     const __m256i K  = LOADU(k + 0);
 
-    *clen = mlen + NORX_A/8;
+    *clen = mlen + NORX_T/8;
 
     /* Initialization */
     INITIALIZE(A, B, C, D, N, K);
@@ -354,10 +365,11 @@ int crypto_aead_encrypt(
     /* Process header, if exists */
     if( adlen > 0 )
     {
-        while(adlen >= 80)
+        while(adlen >= BYTES(NORX_R))
         {
             ABSORB_BLOCK(A, B, C, D, ad);
-            ad += 80; adlen -= 80;
+            ad += BYTES(NORX_R);
+            adlen -= BYTES(NORX_R);
         }
         PAD(lastblock, sizeof lastblock, ad, adlen);
         ABSORB_BLOCK(A, B, C, D, lastblock);
@@ -366,10 +378,12 @@ int crypto_aead_encrypt(
     /* Encrypt payload */
     if(mlen > 0)
     {
-        while( mlen >= 80 )
+        while( mlen >= BYTES(NORX_R) )
         {
             ENCRYPT_BLOCK(A, B, C, D, m, c);
-            mlen -= 80; m += 80; c += 80;
+            mlen -= BYTES(NORX_R);
+            m += BYTES(NORX_R);
+            c += BYTES(NORX_R);
         }
         /* Handle last block */
         PAD(lastblock, sizeof lastblock, m, mlen);
@@ -396,15 +410,15 @@ int crypto_aead_decrypt(
     const unsigned char *k
     )
 {
-    ALIGN(64) unsigned char lastblock[80];
+    ALIGN(64) unsigned char lastblock[BYTES(NORX_R)];
     __m256i A, B, C, D;
     const __m128i N  = LOADU128(npub);
     const __m256i K  = LOADU(k + 0);
 
-    if(clen < NORX_A/8)
+    if(clen < NORX_T/8)
         return -1;
 
-    clen -= NORX_A/8;
+    clen -= NORX_T/8;
     *mlen = clen;
 
     /* Initialization */
@@ -413,11 +427,11 @@ int crypto_aead_decrypt(
     /* Process header, if exists */
     if( adlen > 0 )
     {
-        while(adlen >= 80)
+        while(adlen >= BYTES(NORX_R))
         {
             ABSORB_BLOCK(A, B, C, D, ad);
-            ad += 80;
-            adlen -= 80;
+            ad += BYTES(NORX_R);
+            adlen -= BYTES(NORX_R);
         }
         PAD(lastblock, sizeof lastblock, ad, adlen);
         ABSORB_BLOCK(A, B, C, D, lastblock);
@@ -426,10 +440,12 @@ int crypto_aead_decrypt(
     /* Decrypt payload */
     if(clen > 0)
     {
-        while(clen >= 80)
+        while(clen >= BYTES(NORX_R))
         {
             DECRYPT_BLOCK(A, B, C, D, c, m);
-            c += 80; m += 80; clen -= 80;
+            c += BYTES(NORX_R);
+            m += BYTES(NORX_R);
+            clen -= BYTES(NORX_R);
         }
 
         /* Final block */
@@ -444,7 +460,7 @@ int crypto_aead_decrypt(
 
     /* Verify tag */
     A = _mm256_cmpeq_epi8(A, LOADU(c +  0));
-    return (((unsigned long long)_mm256_movemask_epi8(A) + 1) >> 32) - 1;
+    return (((_mm256_movemask_epi8(A) & 0xFFFFFFFFULL) + 1) >> 32) - 1;
 }
 
 
