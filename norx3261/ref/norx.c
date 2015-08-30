@@ -466,12 +466,10 @@ void norx_encrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
 {
     if (inlen > 0)
     {
-        uint64_t lane = 0;
-        uint8_t emptyblock[BYTES(NORX_R)];
+        size_t lane = 0;
         norx_state_t sum;
         norx_state_t state2;
 
-        norx_pad(emptyblock, emptyblock, 0);
         memset(sum, 0, sizeof(norx_state_t));
 
         while (inlen >= BYTES(NORX_R))
@@ -481,8 +479,12 @@ void norx_encrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
             norx_branch(state2, lane++);
             /* encrypt */
             norx_encrypt_block(state2, out, in);
-            /* empty padding */
-            norx_absorb_block(state2, emptyblock, PAYLOAD_TAG);
+
+            #if defined(NORX_DEBUG)
+            printf("Encrypt block (lane: %lu)\n", lane - 1);
+            norx_debug(state2, in, BYTES(NORX_R), out, BYTES(NORX_R));
+            #endif
+
             /* merge */
             norx_merge(sum, state2);
 
@@ -498,12 +500,23 @@ void norx_encrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
             norx_branch(state2, lane++);
             /* encrypt */
             norx_encrypt_lastblock(state2, out, in, inlen);
+
+            #if defined(NORX_DEBUG)
+            printf("Encrypt lastblock (lane: %lu)\n", lane - 1);
+            norx_debug(state2, in, inlen, out, inlen);
+            #endif
+
             /* merge */
             norx_merge(sum, state2);
         }
         memcpy(state, sum, sizeof(norx_state_t));
         burn(state2, 0, sizeof(norx_state_t));
         burn(sum, 0, sizeof(norx_state_t));
+
+        #if defined(NORX_DEBUG)
+        printf("Encryption finalised\n");
+        norx_debug(state, NULL, 0, NULL, 0);
+        #endif
     }
 }
 
@@ -512,11 +525,9 @@ void norx_decrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
     if (inlen > 0)
     {
         size_t lane = 0;
-        uint8_t emptyblock[BYTES(NORX_R)];
         norx_state_t sum;
         norx_state_t state2;
 
-        norx_pad(emptyblock, emptyblock, 0);
         memset(sum, 0, sizeof(norx_state_t));
 
         while (inlen >= BYTES(NORX_R))
@@ -526,8 +537,12 @@ void norx_decrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
             norx_branch(state2, lane++);
             /* decrypt */
             norx_decrypt_block(state2, out, in);
-            /* empty padding */
-            norx_absorb_block(state2, emptyblock, PAYLOAD_TAG);
+
+            #if defined(NORX_DEBUG)
+            printf("Decrypt block (lane: %lu)\n", lane - 1);
+            norx_debug(state2, in, BYTES(NORX_R), out, BYTES(NORX_R));
+            #endif
+
             /* merge */
             norx_merge(sum, state2);
 
@@ -543,12 +558,23 @@ void norx_decrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
             norx_branch(state2, lane++);
             /* decrypt */
             norx_decrypt_lastblock(state2, out, in, inlen);
+
+            #if defined(NORX_DEBUG)
+            printf("Decrypt lastblock (lane: %lu)\n", lane - 1);
+            norx_debug(state2, in, inlen, out, inlen);
+            #endif
+
             /* merge */
             norx_merge(sum, state2);
         }
         memcpy(state, sum, sizeof(norx_state_t));
         burn(state2, 0, sizeof(norx_state_t));
         burn(sum, 0, sizeof(norx_state_t));
+
+        #if defined(NORX_DEBUG)
+        printf("Decryption finalised\n");
+        norx_debug(state, NULL, 0, NULL, 0);
+        #endif
     }
 }
 #else /* D < 0 */
