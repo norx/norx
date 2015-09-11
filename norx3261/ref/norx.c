@@ -237,7 +237,7 @@ static NORX_INLINE void norx_decrypt_lastblock(norx_state_t state, uint8_t *out,
 }
 
 /* Low-level operations */
-void norx_init(norx_state_t state, const unsigned char *k, const unsigned char *n)
+static NORX_INLINE void norx_init(norx_state_t state, const unsigned char *k, const unsigned char *n)
 {
     norx_word_t * S = state->S;
     size_t i;
