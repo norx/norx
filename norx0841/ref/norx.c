@@ -19,7 +19,7 @@
 #include "norx_util.h"
 #include "norx.h"
 
-const char * norx_version = "1.1";
+const char * norx_version = "2.0";
 
 #if NORX_W == 8
     #define NORX_N (NORX_W *  4)   /* Nonce size */
@@ -47,12 +47,6 @@ const char * norx_version = "1.1";
     #define R2 5
     #define R3 7
 
-    /* Initialization constants */
-    static const norx_word_t norx_ui[2] =
-    {
-       0x88, 0x97
-    };
-
 #elif NORX_W == 16 /* NORX16 specific */
 
     #define LOAD load16
@@ -63,13 +57,6 @@ const char * norx_version = "1.1";
     #define R1 11
     #define R2 12
     #define R3 15
-
-    /* Initialization constants */
-    static const norx_word_t norx_ui[8] =
-    {
-       0x62C0, 0xB797, 0x369A, 0xB231,
-       0xD42C, 0x28FC, 0x2A74, 0x566F
-    };
 
 #else
     #error "Invalid word size."
@@ -263,6 +250,14 @@ static NORX_INLINE void norx_decrypt_lastblock(norx_state_t state, uint8_t *out,
 static NORX_INLINE void norx_init(norx_state_t state, const uint8_t *k, const uint8_t *n)
 {
     norx_word_t * S = state->S;
+    size_t i;
+
+    for(i = 0; i < WORDS(NORX_B); ++i) {
+        S[i] = i;
+    }
+
+    F(S);
+    F(S);
 
 #if NORX_W == 8
 
@@ -282,8 +277,6 @@ static NORX_INLINE void norx_init(norx_state_t state, const uint8_t *k, const ui
     S[11] = LOAD(k + 7 * BYTES(NORX_W));
 
     S[12] = LOAD(k + 8 * BYTES(NORX_W));
-    S[13] = norx_ui[0];
-    S[14] = norx_ui[1];
     S[15] = LOAD(k + 9 * BYTES(NORX_W));
 
 #elif NORX_W == 16
@@ -297,16 +290,6 @@ static NORX_INLINE void norx_init(norx_state_t state, const uint8_t *k, const ui
     S[ 5] = LOAD(k + 3 * BYTES(NORX_W));
     S[ 6] = LOAD(k + 4 * BYTES(NORX_W));
     S[ 7] = LOAD(k + 5 * BYTES(NORX_W));
-
-    S[ 8] = norx_ui[0];
-    S[ 9] = norx_ui[1];
-    S[10] = norx_ui[2];
-    S[11] = norx_ui[3];
-
-    S[12] = norx_ui[4];
-    S[13] = norx_ui[5];
-    S[14] = norx_ui[6];
-    S[15] = norx_ui[7];
 
 #else
     #error "Invalid word size."
