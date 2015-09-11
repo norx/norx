@@ -7,7 +7,7 @@ NORX is still a rather new design. The authors are confident that it is secure b
 ####Specification
 This repository provides implementations for the following specifications:
 
-* NORX8/16: [v1.1](http://cryptomaths.com/data/papers/2015-AJN-norx8-and-norx16.pdf)
+* NORX8/16: [v2.0](http://cryptomaths.com/data/papers/2015-AJN-norx8-and-norx16.pdf)
 * NORX32/64: [v2.0](https://norx.io/data/norx.pdf) ([CAESAR](http://competitions.cr.yp.to/caesar.html) submission)
 
 ####License
