@@ -1,8 +1,10 @@
 /*
    NORX reference source code package - reference C implementations
 
-   Written in 2014 and 2015 by Samuel Neves <sneves@dei.uc.pt> and Philipp
-   Jovanovic <jovanovic@fim.uni-passau.de>
+   Written 2014-2015 by:
+
+        - Samuel Neves <sneves@dei.uc.pt>
+        - Philipp Jovanovic <jovanovic@fim.uni-passau.de>
 
    To the extent possible under law, the author(s) have dedicated all copyright
    and related and neighboring rights to this software to the public domain
@@ -32,12 +34,13 @@
 #include <string.h>
 #include <stdint.h>
 
+#define BITS(x) (sizeof(x) * CHAR_BIT)
 #define BYTES(x) (((x) + 7) / 8)
 #define WORDS(x) (((x) + (NORX_W-1)) / NORX_W)
 
-#define BITS(x) (sizeof(x) * CHAR_BIT)
 #define ROTL(x, c) ( ((x) << (c)) | ((x) >> (BITS(x) - (c))) )
 #define ROTR(x, c) ( ((x) >> (c)) | ((x) << (BITS(x) - (c))) )
+
 
 static NORX_INLINE uint8_t load8(const void * in)
 {
@@ -51,6 +54,7 @@ static NORX_INLINE uint8_t load8(const void * in)
 #endif
 }
 
+
 static NORX_INLINE uint16_t load16(const void * in)
 {
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
@@ -63,42 +67,6 @@ static NORX_INLINE uint16_t load16(const void * in)
            ((uint16_t)p[1] << 8);
 #endif
 }
-
-static NORX_INLINE uint32_t load32(const void * in)
-{
-#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-    uint32_t v;
-    memcpy(&v, in, sizeof v);
-    return v;
-#else
-    const uint8_t * p = (const uint8_t *)in;
-    return ((uint32_t)p[0] <<  0) |
-           ((uint32_t)p[1] <<  8) |
-           ((uint32_t)p[2] << 16) |
-           ((uint32_t)p[3] << 24);
-#endif
-}
-
-
-static NORX_INLINE uint64_t load64(const void * in)
-{
-#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-    uint64_t v;
-    memcpy(&v, in, sizeof v);
-    return v;
-#else
-    const uint8_t * p = (const uint8_t *)in;
-    return ((uint64_t)p[0] <<  0) |
-           ((uint64_t)p[1] <<  8) |
-           ((uint64_t)p[2] << 16) |
-           ((uint64_t)p[3] << 24) |
-           ((uint64_t)p[4] << 32) |
-           ((uint64_t)p[5] << 40) |
-           ((uint64_t)p[6] << 48) |
-           ((uint64_t)p[7] << 56);
-#endif
-}
-
 
 
 static NORX_INLINE void store8(void * out, const uint8_t v)
@@ -120,37 +88,6 @@ static NORX_INLINE void store16(void * out, const uint16_t v)
   uint8_t * p = (uint8_t *)out;
   p[0] = (uint8_t)(v >> 0);
   p[1] = (uint8_t)(v >> 8);
-#endif
-}
-
-static NORX_INLINE void store32(void * out, const uint32_t v)
-{
-#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-    memcpy(out, &v, sizeof v);
-#else
-    uint8_t * p = (uint8_t *)out;
-    p[0] = (uint8_t)(v >>  0);
-    p[1] = (uint8_t)(v >>  8);
-    p[2] = (uint8_t)(v >> 16);
-    p[3] = (uint8_t)(v >> 24);
-#endif
-}
-
-
-static NORX_INLINE void store64(void * out, const uint64_t v)
-{
-#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-    memcpy(out, &v, sizeof v);
-#else
-    uint8_t * p = (uint8_t *)out;
-    p[0] = (uint8_t)(v >>  0);
-    p[1] = (uint8_t)(v >>  8);
-    p[2] = (uint8_t)(v >> 16);
-    p[3] = (uint8_t)(v >> 24);
-    p[4] = (uint8_t)(v >> 32);
-    p[5] = (uint8_t)(v >> 40);
-    p[6] = (uint8_t)(v >> 48);
-    p[7] = (uint8_t)(v >> 56);
 #endif
 }
 

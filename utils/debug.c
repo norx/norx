@@ -69,9 +69,9 @@ int main() {
     for (i = 0; i < zlen; ++i) { z[i] = i & 255; }
 
     printf("========== SETUP ==========\n");
-    printf("Key:\n");
+    printf("Key:\n"); /* NOTE: some NORX variants do not use all of the bytes in the buffer */
     print_bytes(k, sizeof k);
-    printf("Nonce:\n");
+    printf("Nonce:\n"); /* NOTE: some NORX variants do not use all of the bytes in the buffer */
     print_bytes(n, sizeof n);
     printf("Header:\n");
     print_bytes(a, alen);
