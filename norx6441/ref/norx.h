@@ -43,15 +43,6 @@ typedef enum tag__
     MERGE_TAG   = 0x20
 } tag_t;
 
-/* Low-level operations */
-void norx_init(norx_state_t state, const unsigned char *k, const unsigned char *n);
-void norx_absorb_data(norx_state_t state, const unsigned char * in, size_t inlen, tag_t tag);
-void norx_encrypt_data(norx_state_t state, unsigned char *out, const unsigned char * in, size_t inlen);
-void norx_decrypt_data(norx_state_t state, unsigned char *out, const unsigned char * in, size_t inlen);
-void norx_process_trailer(norx_state_t state, const unsigned char * in, size_t inlen);
-void norx_output_tag(norx_state_t state, unsigned char * tag);
-int  norx_verify_tag(const unsigned char * tag1, const unsigned char * tag2);
-
 /* High-level operations */
 void norx_aead_encrypt(
         unsigned char *c, size_t *clen,
