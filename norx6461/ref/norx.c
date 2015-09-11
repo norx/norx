@@ -492,23 +492,24 @@ void norx_encrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
             in    += BYTES(NORX_R);
             out   += BYTES(NORX_R);
         }
-        /* last block, 0 < inlen < BYTES(NORX_R) */
-        if (inlen > 0)
-        {
-            /* branch */
-            memcpy(state2, state, sizeof(norx_state_t));
-            norx_branch(state2, lane++);
-            /* encrypt */
-            norx_encrypt_lastblock(state2, out, in, inlen);
 
-            #if defined(NORX_DEBUG)
-            printf("Encrypt lastblock (lane: %lu)\n", lane - 1);
-            norx_debug(state2, in, inlen, out, inlen);
-            #endif
+        /* last block, 0 <= inlen < BYTES(NORX_R) */
 
-            /* merge */
-            norx_merge(sum, state2);
-        }
+        /* branch */
+        memcpy(state2, state, sizeof(norx_state_t));
+        norx_branch(state2, lane++);
+
+        /* encrypt */
+        norx_encrypt_lastblock(state2, out, in, inlen);
+
+        #if defined(NORX_DEBUG)
+        printf("Encrypt lastblock (lane: %lu)\n", lane - 1);
+        norx_debug(state2, in, inlen, out, inlen);
+        #endif
+
+        /* merge */
+        norx_merge(sum, state2);
+
         memcpy(state, sum, sizeof(norx_state_t));
         burn(state2, 0, sizeof(norx_state_t));
         burn(sum, 0, sizeof(norx_state_t));
@@ -550,23 +551,24 @@ void norx_decrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
             in    += BYTES(NORX_R);
             out   += BYTES(NORX_R);
         }
-        /* last block, 0 < inlen < BYTES(NORX_R) */
-        if (inlen > 0)
-        {
-            /* branch */
-            memcpy(state2, state, sizeof(norx_state_t));
-            norx_branch(state2, lane++);
-            /* decrypt */
-            norx_decrypt_lastblock(state2, out, in, inlen);
 
-            #if defined(NORX_DEBUG)
-            printf("Decrypt lastblock (lane: %lu)\n", lane - 1);
-            norx_debug(state2, in, inlen, out, inlen);
-            #endif
+        /* last block, 0 <= inlen < BYTES(NORX_R) */
 
-            /* merge */
-            norx_merge(sum, state2);
-        }
+        /* branch */
+        memcpy(state2, state, sizeof(norx_state_t));
+        norx_branch(state2, lane++);
+
+        /* decrypt */
+        norx_decrypt_lastblock(state2, out, in, inlen);
+
+        #if defined(NORX_DEBUG)
+        printf("Decrypt lastblock (lane: %lu)\n", lane - 1);
+        norx_debug(state2, in, inlen, out, inlen);
+        #endif
+
+        /* merge */
+        norx_merge(sum, state2);
+
         memcpy(state, sum, sizeof(norx_state_t));
         burn(state2, 0, sizeof(norx_state_t));
         burn(sum, 0, sizeof(norx_state_t));
