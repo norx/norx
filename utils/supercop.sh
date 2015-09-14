@@ -23,3 +23,6 @@ if [ `uname` == "Darwin" ]; then
 else
   find $DEST -type f -exec sed -i 's/defined(SUPERCOP)/1/g' '{}' \;
 fi
+
+# pack stuff
+tar -czf $DEST.tar.gz $DEST
