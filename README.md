@@ -6,7 +6,7 @@ NORX is still a rather new authenticated encryption algorithm. The authors are c
 ##About
 This repository provides implementations for the following specifications:
 
-* NORX8/16: [v2.0](http://cryptomaths.com/data/papers/2015-AJN-norx8-and-norx16.pdf)
+* NORX8/16: [v2.0](https://zerobyte.io/files/papers/2015-AJN-norx8-and-norx16.pdf)
 * NORX32/64: [v2.0](https://norx.io/data/norx.pdf) ([CAESAR](http://competitions.cr.yp.to/caesar.html) submission)
 
 For further information, please visit the official homepage: [https://norx.io](https://norx.io)
