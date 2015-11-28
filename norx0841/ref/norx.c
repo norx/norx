@@ -277,13 +277,13 @@ static NORX_INLINE void norx_init(norx_state_t state, const uint8_t *k, const ui
     S[11] = LOAD(k + 7 * BYTES(NORX_W));
 
     S[12] = LOAD(k + 8 * BYTES(NORX_W));
-    S[15] = LOAD(k + 9 * BYTES(NORX_W));
+    S[13] = LOAD(k + 9 * BYTES(NORX_W));
 
 #elif NORX_W == 16
 
-    S[ 0] = LOAD(k + 0 * BYTES(NORX_W));
-    S[ 1] = LOAD(n + 0 * BYTES(NORX_W));
-    S[ 2] = LOAD(n + 1 * BYTES(NORX_W));
+    S[ 0] = LOAD(n + 0 * BYTES(NORX_W));
+    S[ 1] = LOAD(n + 1 * BYTES(NORX_W));
+    S[ 2] = LOAD(k + 0 * BYTES(NORX_W));
     S[ 3] = LOAD(k + 1 * BYTES(NORX_W));
 
     S[ 4] = LOAD(k + 2 * BYTES(NORX_W));

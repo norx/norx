@@ -18,6 +18,6 @@ check:
 	@rm check
 
 genkat:
-	$(CC) $(CFLAGS) -o genkat ../../utils/genkat.c norx.c caesar.c
-	./genkat > ../kat.h
-	rm genkat
+	@$(CC) $(CFLAGS) -o genkat ../../utils/genkat.c norx.c caesar.c
+	@./genkat > ../kat.h
+	@rm genkat
