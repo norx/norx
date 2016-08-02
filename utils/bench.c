@@ -136,7 +136,7 @@ void frequency()
 
 void bench()
 {
-#define BENCH_TRIALS     32
+#define BENCH_TRIALS    128
 #define BENCH_MAXLEN   1536
   static unsigned char  in[4096];
   static unsigned char out[4096+32];
@@ -173,7 +173,7 @@ void bench()
 
   printf( "#2048   %6llu   %7.2f\n", median[2048], ( double )median[2048] / 2048.0 );
   printf( "#4096   %6llu   %7.2f\n", median[4096], ( double )median[4096] / 4096.0 );
-  printf( "#long     long   %7.2f\n", ( double )( median[4096] - median[2048] ) / 2048.0 );
+  printf( "#long     long   %7.2f\n", ( double )( median[2048] - median[128] ) / (2048.0 - 128) );
 }
 
 int main(int argc, char **argv)
