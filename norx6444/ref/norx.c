@@ -302,18 +302,16 @@ void norx_absorb_data(norx_state_t state, const unsigned char * in, size_t inlen
 #if NORX_P != 1 /* only required in parallel modes */
 static NORX_INLINE void norx_branch(norx_state_t state, uint64_t lane)
 {
+    size_t i;
     norx_word_t * S = state->S;
 
     S[15] ^= BRANCH_TAG;
     norx_permute(state);
 
     /* Inject lane ID */
-    #if NORX_W == 32
-    S[13] ^= (lane >>  0) & 0xFFFFFFFF;
-    S[14] ^= (lane >> 32) & 0xFFFFFFFF;
-    #elif NORX_W == 64
-    S[13] ^= lane;
-    #endif
+    for (i = 0; i < WORDS(NORX_R); ++i) {
+        S[i] ^= lane;
+    }
 }
 
 /* state = state xor state1 */
