@@ -1,18 +1,18 @@
 /*
-   NORX reference source code package - reference C implementations
-
-   Written 2014-2015 by:
-
-        - Samuel Neves <sneves@dei.uc.pt>
-        - Philipp Jovanovic <jovanovic@fim.uni-passau.de>
-
-   To the extent possible under law, the author(s) have dedicated all copyright
-   and related and neighboring rights to this software to the public domain
-   worldwide. This software is distributed without any warranty.
-
-   You should have received a copy of the CC0 Public Domain Dedication along with
-   this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-*/
+ * NORX reference source code package - reference C implementations
+ *
+ * Written 2014-2016 by:
+ *
+ *      - Samuel Neves <sneves@dei.uc.pt>
+ *      - Philipp Jovanovic <philipp@jovanovic.io>
+ *
+ * To the extent possible under law, the author(s) have dedicated all copyright
+ * and related and neighboring rights to this software to the public domain
+ * worldwide. This software is distributed without any warranty.
+ *
+ * You should have received a copy of the CC0 Public Domain Dedication along with
+ * this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+ */
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -51,7 +51,7 @@ static void print_bytes(const unsigned char *in, size_t inlen)
 
 int main() {
     unsigned char k[32] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x1B,0x1C,0x1D,0x1E,0x1F};
-    unsigned char n[16] = {0xF0,0xE0,0xD0,0xC0,0xB0,0xA0,0x90,0x80,0x70,0x60,0x50,0x40,0x30,0x20,0x10,0x00};
+    unsigned char n[32] = {0xF0,0xE0,0xD0,0xC0,0xB0,0xA0,0x90,0x80,0x70,0x60,0x50,0x40,0x30,0x20,0x10,0x00,0xF1,0xE1,0xD1,0xC1,0xB1,0xA1,0x91,0x81,0x71,0x61,0x51,0x41,0x31,0x21,0x11,0x01};
     unsigned char a[MAX_A] = {0};
     unsigned char m[MAX_M] = {0};
     unsigned char c[MAX_M + 32] = {0};

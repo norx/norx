@@ -1,15 +1,18 @@
 /*
-   NORX reference source code package - reference C implementations
-
-   Written in 2014 by Samuel Neves <sneves@dei.uc.pt>
-
-   To the extent possible under law, the author(s) have dedicated all copyright
-   and related and neighboring rights to this software to the public domain
-   worldwide. This software is distributed without any warranty.
-
-   You should have received a copy of the CC0 Public Domain Dedication along with
-   this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-*/
+ * NORX reference source code package - reference C implementations
+ *
+ * Written 2014-2016 by: 
+ *
+ *      - Samuel Neves <sneves@dei.uc.pt>
+ *      - Philipp Jovanovic <philipp@jovanovic.io>
+ *
+ * To the extent possible under law, the author(s) have dedicated all copyright
+ * and related and neighboring rights to this software to the public domain
+ * worldwide. This software is distributed without any warranty.
+ *
+ * You should have received a copy of the CC0 Public Domain Dedication along with
+ * this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+ */
 #include <string.h>
 #include <stdio.h>
 
@@ -21,7 +24,7 @@ static void genkat(void)
 	unsigned char w[256];
 	unsigned char h[256];
 	unsigned char k[32];
-	unsigned char n[16];
+	unsigned char n[32];
 
 	unsigned int i, j;
 

@@ -1,27 +1,27 @@
 /*
-   NORX reference source code package - reference C implementations
-
-   Written 2014-2015 by:
-
-        - Samuel Neves <sneves@dei.uc.pt>
-        - Philipp Jovanovic <jovanovic@fim.uni-passau.de>
-
-   To the extent possible under law, the author(s) have dedicated all copyright
-   and related and neighboring rights to this software to the public domain
-   worldwide. This software is distributed without any warranty.
-
-   You should have received a copy of the CC0 Public Domain Dedication along with
-   this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-*/
+ * NORX reference source code package - reference C implementations
+ *
+ * Written 2014-2016 by:
+ *
+ *      - Samuel Neves <sneves@dei.uc.pt>
+ *      - Philipp Jovanovic <philipp@jovanovic.io>
+ *
+ * To the extent possible under law, the author(s) have dedicated all copyright
+ * and related and neighboring rights to this software to the public domain
+ * worldwide. This software is distributed without any warranty.
+ *
+ * You should have received a copy of the CC0 Public Domain Dedication along with
+ * this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+ */
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include "norx_util.h"
 #include "norx.h"
 
-const char * norx_version = "2.0";
+const char * norx_version = "3.0";
 
-#define NORX_N (NORX_W *  2)     /* Nonce size */
+#define NORX_N (NORX_W *  4)     /* Nonce size */
 #define NORX_K (NORX_W *  4)     /* Key size */
 #define NORX_B (NORX_W * 16)     /* Permutation width */
 #define NORX_C (NORX_W *  4)     /* Capacity */
@@ -251,6 +251,8 @@ static NORX_INLINE void norx_init(norx_state_t state, const unsigned char *k, co
 
     S[ 0] = LOAD(n + 0 * BYTES(NORX_W));
     S[ 1] = LOAD(n + 1 * BYTES(NORX_W));
+    S[ 2] = LOAD(n + 2 * BYTES(NORX_W));
+    S[ 3] = LOAD(n + 3 * BYTES(NORX_W));
 
     S[ 4] = LOAD(k + 0 * BYTES(NORX_W));
     S[ 5] = LOAD(k + 1 * BYTES(NORX_W));
@@ -263,6 +265,11 @@ static NORX_INLINE void norx_init(norx_state_t state, const unsigned char *k, co
     S[15] ^= NORX_T;
 
     norx_permute(state);
+
+    S[12] ^= LOAD(k + 0 * BYTES(NORX_W));
+    S[13] ^= LOAD(k + 1 * BYTES(NORX_W));
+    S[14] ^= LOAD(k + 2 * BYTES(NORX_W));
+    S[15] ^= LOAD(k + 3 * BYTES(NORX_W));
 
 #if defined(NORX_DEBUG)
     printf("Initialise\n");
@@ -583,19 +590,31 @@ void norx_decrypt_data(norx_state_t state, unsigned char *out, const unsigned ch
     #error "NORX_P cannot be < 0"
 #endif
 
-static NORX_INLINE void norx_finalise(norx_state_t state, unsigned char * tag)
+static NORX_INLINE void norx_finalise(norx_state_t state, unsigned char * tag, const unsigned char * k)
 {
-    size_t i;
     norx_word_t * S = state->S;
-    uint8_t lastblock[BYTES(NORX_R)];
+    uint8_t lastblock[BYTES(NORX_C)];
 
     S[15] ^= FINAL_TAG;
-    norx_permute(state);
+
     norx_permute(state);
 
-    for (i = 0; i < WORDS(NORX_R); ++i) {
-        STORE(lastblock + i * BYTES(NORX_W), S[i]);
-    }
+    S[12] ^= LOAD(k + 0 * BYTES(NORX_W));
+    S[13] ^= LOAD(k + 1 * BYTES(NORX_W));
+    S[14] ^= LOAD(k + 2 * BYTES(NORX_W));
+    S[15] ^= LOAD(k + 3 * BYTES(NORX_W));
+
+    norx_permute(state);
+
+    S[12] ^= LOAD(k + 0 * BYTES(NORX_W));
+    S[13] ^= LOAD(k + 1 * BYTES(NORX_W));
+    S[14] ^= LOAD(k + 2 * BYTES(NORX_W));
+    S[15] ^= LOAD(k + 3 * BYTES(NORX_W));
+
+    STORE(lastblock + 0 * BYTES(NORX_W), S[12]);
+    STORE(lastblock + 1 * BYTES(NORX_W), S[13]);
+    STORE(lastblock + 2 * BYTES(NORX_W), S[14]);
+    STORE(lastblock + 3 * BYTES(NORX_W), S[15]);
 
     memcpy(tag, lastblock, BYTES(NORX_T));
 
@@ -604,7 +623,7 @@ static NORX_INLINE void norx_finalise(norx_state_t state, unsigned char * tag)
     norx_debug(state, NULL, 0, NULL, 0);
     #endif
 
-    burn(lastblock, 0, BYTES(NORX_R)); /* burn full state dump */
+    burn(lastblock, 0, BYTES(NORX_C)); /* burn buffer */
     burn(state, 0, sizeof(norx_state_t)); /* at this point we can also burn the state */
 }
 
@@ -621,7 +640,6 @@ int norx_verify_tag(const unsigned char * tag1, const unsigned char * tag2)
     return (((acc - 1) >> 8) & 1) - 1;
 }
 
-
 /* High-level operations */
 void norx_aead_encrypt(
   unsigned char *c, size_t *clen,
@@ -637,7 +655,7 @@ void norx_aead_encrypt(
     norx_absorb_data(state, a, alen, HEADER_TAG);
     norx_encrypt_data(state, c, m, mlen);
     norx_absorb_data(state, z, zlen, TRAILER_TAG);
-    norx_finalise(state, c + mlen);
+    norx_finalise(state, c + mlen, key);
     *clen = mlen + BYTES(NORX_T);
     burn(state, 0, sizeof(norx_state_t));
 }
@@ -663,7 +681,7 @@ int norx_aead_decrypt(
     norx_absorb_data(state, a, alen, HEADER_TAG);
     norx_decrypt_data(state, m, c, clen - BYTES(NORX_T));
     norx_absorb_data(state, z, zlen, TRAILER_TAG);
-    norx_finalise(state, tag);
+    norx_finalise(state, tag, key);
     *mlen = clen - BYTES(NORX_T);
 
     result = norx_verify_tag(c + clen - BYTES(NORX_T), tag);
