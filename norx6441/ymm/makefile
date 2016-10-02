@@ -16,3 +16,5 @@ check:
 	@$(CC) $(CFLAGS) -I../ -o check ../../utils/check.c norx.c caesar.c
 	@./check
 	@rm check
+
+.PHONY: check debug bench
