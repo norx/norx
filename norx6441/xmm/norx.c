@@ -267,6 +267,11 @@ do                                            \
     S[7] = XOR(S[7], _mm_set_epi64x(TAG, 0)); \
 } while(0)
 
+#define INJECT_KEY(S, K0, K1) do { \
+    S[6] = XOR(S[6], K0);          \
+    S[7] = XOR(S[7], K1);          \
+} while(0)
+
 #define ABSORB_BLOCK(S, IN, TAG)                             \
 do                                                           \
 {                                                            \
@@ -349,10 +354,10 @@ do                                                               \
 #define INITIALISE(S, NONCE, KEY)                     \
 do                                                    \
 {                                                     \
-    S[0] = LOADU(NONCE + 0 * 2 * BYTES(NORX_W));      \
-    S[1] = LOADU(NONCE + 1 * 2 * BYTES(NORX_W));      \
-    S[2] = LOADU(KEY + 0 * 2 * BYTES(NORX_W));        \
-    S[3] = LOADU(KEY + 1 * 2 * BYTES(NORX_W));        \
+    S[0] = LOADU(NONCE +  0);                         \
+    S[1] = LOADU(NONCE + 16);                         \
+    S[2] = LOADU(KEY +  0);                           \
+    S[3] = LOADU(KEY + 16);                           \
     S[4] = _mm_set_epi64x( U9,  U8);                  \
     S[5] = _mm_set_epi64x(U11, U10);                  \
     S[6] = _mm_set_epi64x(U13, U12);                  \
@@ -360,8 +365,7 @@ do                                                    \
     S[6] = XOR(S[6], _mm_set_epi64x(NORX_L, NORX_W)); \
     S[7] = XOR(S[7], _mm_set_epi64x(NORX_T, NORX_P)); \
     PERMUTE(S);                                       \
-    S[6] = XOR(S[6], LOADU(KEY + 0 * 2 * BYTES(NORX_W))); \
-    S[7] = XOR(S[7], LOADU(KEY + 1 * 2 * BYTES(NORX_W))); \
+    INJECT_KEY(S, LOADU(KEY + 0), LOADU(KEY + 16));   \
 } while(0)
 
 #define ABSORB_DATA(S, IN, INLEN, TAG)       \
@@ -415,16 +419,14 @@ do                                                \
     }                                             \
 } while(0)
 
-#define FINALISE(S, KEY)                  \
-do                                        \
-{                                         \
-    INJECT_DOMAIN_CONSTANT(S, FINAL_TAG); \
-    PERMUTE(S);                           \
-    S[6] = XOR(S[6], LOADU(KEY + 0 * 2 * BYTES(NORX_W))); \
-    S[7] = XOR(S[7], LOADU(KEY + 1 * 2 * BYTES(NORX_W))); \
-    PERMUTE(S);                           \
-    S[6] = XOR(S[6], LOADU(KEY + 0 * 2 * BYTES(NORX_W))); \
-    S[7] = XOR(S[7], LOADU(KEY + 1 * 2 * BYTES(NORX_W))); \
+#define FINALISE(S, KEY)                            \
+do                                                  \
+{                                                   \
+    INJECT_DOMAIN_CONSTANT(S, FINAL_TAG);           \
+    PERMUTE(S);                                     \
+    INJECT_KEY(S, LOADU(KEY + 0), LOADU(KEY + 16)); \
+    PERMUTE(S);                                     \
+    INJECT_KEY(S, LOADU(KEY + 0), LOADU(KEY + 16)); \
 } while(0)
 
 #define PAD(OUT, OUTLEN, IN, INLEN) \

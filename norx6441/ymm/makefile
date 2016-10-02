@@ -1,4 +1,4 @@
-CFLAGS=-O3 -mavx2 -march=native -std=c89 -Wall -pedantic -Wno-long-long
+CFLAGS=-O3 -mavx2 -march=core-avx2 -std=c89 -Wall -pedantic -Wno-long-long
 
 all: check bench
 
