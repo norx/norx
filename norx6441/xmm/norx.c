@@ -26,13 +26,13 @@
   #endif
 #endif
 
-const char * norx_version = "2.0";
+const char * norx_version = "3.0";
 
 #define NORX_W 64                /* word size */
 #define NORX_L 4                 /* round number */
 #define NORX_P 1                 /* parallelism degree */
 #define NORX_T (NORX_W *  4)     /* tag size */
-#define NORX_N (NORX_W *  2)     /* nonce size */
+#define NORX_N (NORX_W *  4)     /* nonce size */
 #define NORX_K (NORX_W *  4)     /* key size */
 #define NORX_B (NORX_W * 16)     /* permutation width */
 #define NORX_C (NORX_W *  4)     /* capacity */
@@ -349,8 +349,8 @@ do                                                               \
 #define INITIALISE(S, NONCE, KEY)                     \
 do                                                    \
 {                                                     \
-    S[0] = LOADU(NONCE);                              \
-    S[1] = _mm_set_epi64x( U3,  U2);                    \
+    S[0] = LOADU(NONCE + 0 * 2 * BYTES(NORX_W));      \
+    S[1] = LOADU(NONCE + 1 * 2 * BYTES(NORX_W));      \
     S[2] = LOADU(KEY + 0 * 2 * BYTES(NORX_W));        \
     S[3] = LOADU(KEY + 1 * 2 * BYTES(NORX_W));        \
     S[4] = _mm_set_epi64x( U9,  U8);                  \
@@ -360,6 +360,8 @@ do                                                    \
     S[6] = XOR(S[6], _mm_set_epi64x(NORX_L, NORX_W)); \
     S[7] = XOR(S[7], _mm_set_epi64x(NORX_T, NORX_P)); \
     PERMUTE(S);                                       \
+    S[6] = XOR(S[6], LOADU(KEY + 0 * 2 * BYTES(NORX_W))); \
+    S[7] = XOR(S[7], LOADU(KEY + 1 * 2 * BYTES(NORX_W))); \
 } while(0)
 
 #define ABSORB_DATA(S, IN, INLEN, TAG)       \
@@ -413,12 +415,16 @@ do                                                \
     }                                             \
 } while(0)
 
-#define FINALISE(S)                       \
+#define FINALISE(S, KEY)                  \
 do                                        \
 {                                         \
     INJECT_DOMAIN_CONSTANT(S, FINAL_TAG); \
     PERMUTE(S);                           \
+    S[6] = XOR(S[6], LOADU(KEY + 0 * 2 * BYTES(NORX_W))); \
+    S[7] = XOR(S[7], LOADU(KEY + 1 * 2 * BYTES(NORX_W))); \
     PERMUTE(S);                           \
+    S[6] = XOR(S[6], LOADU(KEY + 0 * 2 * BYTES(NORX_W))); \
+    S[7] = XOR(S[7], LOADU(KEY + 1 * 2 * BYTES(NORX_W))); \
 } while(0)
 
 #define PAD(OUT, OUTLEN, IN, INLEN) \
@@ -457,9 +463,9 @@ void norx_aead_encrypt(
     ABSORB_DATA(S, a, alen, HEADER_TAG);
     ENCRYPT_DATA(S, c, m, mlen);
     ABSORB_DATA(S, z, zlen, TRAILER_TAG);
-    FINALISE(S);
-    STOREU(c + mlen,                   S[0]);
-    STOREU(c + mlen + BYTES(NORX_T)/2, S[1]);
+    FINALISE(S, key);
+    STOREU(c + mlen,                   S[6]);
+    STOREU(c + mlen + BYTES(NORX_T)/2, S[7]);
 }
 
 
@@ -482,11 +488,11 @@ int norx_aead_decrypt(
     ABSORB_DATA(S, a, alen, HEADER_TAG);
     DECRYPT_DATA(S, m, c, clen - BYTES(NORX_T));
     ABSORB_DATA(S, z, zlen, TRAILER_TAG);
-    FINALISE(S);
+    FINALISE(S, key);
 
     /* Verify tag */
-    S[0] = _mm_cmpeq_epi8(S[0], LOADU(c + clen - BYTES(NORX_T)  ));
-    S[1] = _mm_cmpeq_epi8(S[1], LOADU(c + clen - BYTES(NORX_T)/2));
-    return (((_mm_movemask_epi8(AND(S[0], S[1])) & 0xFFFFUL) + 1) >> 16) - 1;
+    S[6] = _mm_cmpeq_epi8(S[6], LOADU(c + clen - BYTES(NORX_T)  ));
+    S[7] = _mm_cmpeq_epi8(S[7], LOADU(c + clen - BYTES(NORX_T)/2));
+    return (((_mm_movemask_epi8(AND(S[6], S[7])) & 0xFFFFUL) + 1) >> 16) - 1;
 }
 
