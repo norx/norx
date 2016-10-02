@@ -27,7 +27,7 @@
   #endif
 #endif
 
-const char * norx_version = "2.0";
+const char * norx_version = "3.0";
 
 #define NORX_W 32                /* word size */
 #define NORX_L 4                 /* round number */

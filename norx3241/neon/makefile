@@ -17,3 +17,4 @@ check:
 	@./check
 	@rm check
 
+.PHONY: check debug bench
