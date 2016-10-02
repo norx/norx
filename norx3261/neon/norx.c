@@ -18,13 +18,13 @@
 #include <arm_neon.h>
 #include "norx.h"
 
-const char * norx_version = "2.0";
+const char * norx_version = "3.0";
 
 #define NORX_W 32                /* word size */
 #define NORX_L 6                 /* round number */
 #define NORX_P 1                 /* parallelism degree */
 #define NORX_T (NORX_W *  4)     /* tag size */
-#define NORX_N (NORX_W *  2)     /* nonce size */
+#define NORX_N (NORX_W *  4)     /* nonce size */
 #define NORX_K (NORX_W *  4)     /* key size */
 #define NORX_B (NORX_W * 16)     /* permutation width */
 #define NORX_C (NORX_W *  4)     /* capacity */
@@ -206,6 +206,10 @@ do                                               \
     D = XOR(D, tag);                             \
 } while(0)
 
+#define INJECT_KEY(A, B, C, D, KEY) do {  \
+    D = XOR(D, KEY);                      \
+} while(0)
+
 
 #define ABSORB_BLOCK(A, B, C, D, IN, TAG)    \
 do                                           \
@@ -274,19 +278,14 @@ do                                                                          \
     memcpy(OUT, lastblock, INLEN);                                          \
 } while(0)
 
-#define INITIALISE(A, B, C, D, N, K)                             \
-do                                                               \
-{                                                                \
-    const uint32x4_t A_ = SETV(N & 0xFFFFFFFF, N >> 32, U2, U3); \
-    const uint32x4_t C_ = SETV( U8,  U9, U10, U11);              \
-    const uint32x4_t D_ = SETV(U12, U13, U14, U15);              \
-    const uint32x4_t P_ = SETV(NORX_W, NORX_L, NORX_P, NORX_T);  \
-    A = A_;                                                      \
-    B = LOADU(K);                                                \
-    C = C_;                                                      \
-    D = D_;                                                      \
-    D = XOR(D, P_);                                              \
-    PERMUTE(A, B, C, D);                                         \
+#define INITIALISE(A, B, C, D, N, K) do {             \
+    A = LOADU(N);                                     \
+    B = LOADU(K);                                     \
+    C = SETV( U8,  U9, U10, U11);                     \
+    D = SETV(U12, U13, U14, U15);                     \
+    D = XOR(D, SETV(NORX_W, NORX_L, NORX_P, NORX_T)); \
+    PERMUTE(A, B, C, D);                              \
+    INJECT_KEY(A, B, C, D, LOADU(K));                 \
 } while(0)
 
 #define ABSORB_DATA(A, B, C, D, IN, INLEN, TAG)       \
@@ -340,12 +339,14 @@ do                                                         \
     }                                                      \
 } while(0)
 
-#define FINALISE(A, B, C, D)                       \
+#define FINALISE(A, B, C, D, K)                    \
 do                                                 \
 {                                                  \
     INJECT_DOMAIN_CONSTANT(A, B, C, D, FINAL_TAG); \
     PERMUTE(A, B, C, D);                           \
+    INJECT_KEY(A, B, C, D, LOADU(K));              \
     PERMUTE(A, B, C, D);                           \
+    INJECT_KEY(A, B, C, D, LOADU(K));              \
 } while(0)
 
 #define PAD(OUT, OUTLEN, IN, INLEN) \
@@ -377,16 +378,14 @@ void norx_aead_encrypt(
 )
 {
     uint32x4_t A, B, C, D;
-    uint64_t N;
 
-    memcpy(&N, nonce, sizeof N);
     *clen = mlen + BYTES(NORX_T);
-    INITIALISE(A, B, C, D, N, key);
+    INITIALISE(A, B, C, D, nonce, key);
     ABSORB_DATA(A, B, C, D, a, alen, HEADER_TAG);
     ENCRYPT_DATA(A, B, C, D, c, m, mlen);
     ABSORB_DATA(A, B, C, D, z, zlen, TRAILER_TAG);
-    FINALISE(A, B, C, D);
-    STORE(c + mlen, A);
+    FINALISE(A, B, C, D, key);
+    STORE(c + mlen, D);
 }
 
 
@@ -400,21 +399,19 @@ int norx_aead_decrypt(
 )
 {
     uint32x4_t A, B, C, D;
-    uint64_t N;
 
     if(clen < BYTES(NORX_T)) { return -1; }
 
-    memcpy(&N, nonce, sizeof N);
     *mlen = clen - BYTES(NORX_T);
-    INITIALISE(A, B, C, D, N, key);
+    INITIALISE(A, B, C, D, nonce, key);
     ABSORB_DATA(A, B, C, D, a, alen, HEADER_TAG);
     DECRYPT_DATA(A, B, C, D, m, c, clen - BYTES(NORX_T));
     ABSORB_DATA(A, B, C, D, z, zlen, TRAILER_TAG);
-    FINALISE(A, B, C, D);
+    FINALISE(A, B, C, D, key);
 
     /* Verify tag */
-    A = vceqq_u32(A, LOADU(c + clen - BYTES(NORX_T)));
-    return 0xFFFFFFFF == (vgetq_lane_u32(A, 0) & vgetq_lane_u32(A, 1) & vgetq_lane_u32(A, 2) & vgetq_lane_u32(A, 3)) ? 0 : -1;
+    D = vceqq_u32(D, LOADU(c + clen - BYTES(NORX_T)));
+    return 0xFFFFFFFF == (vgetq_lane_u32(D, 0) & vgetq_lane_u32(D, 1) & vgetq_lane_u32(D, 2) & vgetq_lane_u32(D, 3)) ? 0 : -1;
 }
 
 
