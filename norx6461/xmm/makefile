@@ -1,4 +1,4 @@
-CFLAGS=-O3 -march=native -std=c89 -Wall -pedantic -Wno-long-long
+CFLAGS=-O3 -march=corei7-avx -std=c89 -Wall -pedantic -Wno-long-long
 
 all: check bench
 
@@ -17,3 +17,4 @@ check:
 	@./check
 	@rm check
 
+.PHONY: check debug bench
