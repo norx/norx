@@ -1,4 +1,4 @@
-CFLAGS=-O3 -mavx2 -march=native -std=c89 -Wall -pedantic -Wno-long-long
+CFLAGS=-O3 -mavx2 -march=core-avx2 -std=c89 -Wall -pedantic -Wno-long-long
 
 all: check bench
 
@@ -16,3 +16,5 @@ check:
 	@$(CC) $(CFLAGS) -I../ -o check ../../utils/check.c norx.c caesar.c
 	@./check
 	@rm check
+
+.PHONY: check debug bench

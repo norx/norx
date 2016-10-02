@@ -26,13 +26,13 @@
   #endif
 #endif
 
-const char * norx_version = "2.0";
+const char * norx_version = "3.0";
 
 #define NORX_W 64                /* word size */
 #define NORX_L 6                 /* round number */
 #define NORX_P 1                 /* parallelism degree */
 #define NORX_T (NORX_W *  4)     /* tag size */
-#define NORX_N (NORX_W *  2)     /* nonce size */
+#define NORX_N (NORX_W *  4)     /* nonce size */
 #define NORX_K (NORX_W *  4)     /* key size */
 #define NORX_B (NORX_W * 16)     /* permutation width */
 #define NORX_C (NORX_W *  4)     /* capacity */
@@ -215,6 +215,10 @@ do                                               \
     D = XOR(D, _mm256_set_epi64x(TAG, 0, 0, 0)); \
 } while(0)
 
+#define INJECT_KEY(A, B, C, D, K) do { \
+    D = XOR(D, K);                     \
+} while(0)                             
+
 #define ABSORB_BLOCK(A, B, C, D, IN, TAG)    \
 do                                           \
 {                                            \
@@ -285,13 +289,13 @@ do                                                                          \
 #define INITIALISE(A, B, C, D, NONCE, KEY)                                 \
 do                                                                         \
 {                                                                          \
-    A = _mm256_blend_epi32(_mm256_set_epi64x(U3, U2, 0, 0),                \
-                           _mm256_castsi128_si256(LOADU128(NONCE)), 0x0F); \
+    A = LOADU(NONCE);                                                      \
     B = LOADU(KEY);                                                        \
     C = _mm256_set_epi64x(U11, U10,  U9,  U8);                             \
     D = _mm256_set_epi64x(U15, U14, U13, U12);                             \
     D = XOR(D, _mm256_set_epi64x(NORX_T, NORX_P, NORX_L, NORX_W));         \
     PERMUTE(A, B, C, D);                                                   \
+    INJECT_KEY(A, B, C, D, LOADU(KEY));                                    \
 } while(0)
 
 #define ABSORB_DATA(A, B, C, D, IN, INLEN, TAG)       \
@@ -345,12 +349,14 @@ do                                                         \
     }                                                      \
 } while(0)
 
-#define FINALISE(A, B, C, D)                       \
+#define FINALISE(A, B, C, D, KEY)                  \
 do                                                 \
 {                                                  \
     INJECT_DOMAIN_CONSTANT(A, B, C, D, FINAL_TAG); \
     PERMUTE(A, B, C, D);                           \
+    INJECT_KEY(A, B, C, D, LOADU(KEY));            \
     PERMUTE(A, B, C, D);                           \
+    INJECT_KEY(A, B, C, D, LOADU(KEY));            \
 } while(0)
 
 #define PAD(OUT, OUTLEN, IN, INLEN) \
@@ -388,8 +394,8 @@ void norx_aead_encrypt(
     ABSORB_DATA(A, B, C, D, a, alen, HEADER_TAG);
     ENCRYPT_DATA(A, B, C, D, c, m, mlen);
     ABSORB_DATA(A, B, C, D, z, zlen, TRAILER_TAG);
-    FINALISE(A, B, C, D);
-    STOREU(c + mlen, A);
+    FINALISE(A, B, C, D, key);
+    STOREU(c + mlen, D);
 }
 
 
@@ -412,9 +418,9 @@ int norx_aead_decrypt(
     ABSORB_DATA(A, B, C, D, a, alen, HEADER_TAG);
     DECRYPT_DATA(A, B, C, D, m, c, clen - BYTES(NORX_T));
     ABSORB_DATA(A, B, C, D, z, zlen, TRAILER_TAG);
-    FINALISE(A, B, C, D);
+    FINALISE(A, B, C, D, key);
 
     /* Verify tag */
-    A = _mm256_cmpeq_epi8(A, LOADU(c + clen - BYTES(NORX_T)));
-    return (((_mm256_movemask_epi8(A) & 0xFFFFFFFFULL) + 1) >> 32) - 1;
+    D = _mm256_cmpeq_epi8(D, LOADU(c + clen - BYTES(NORX_T)));
+    return (((_mm256_movemask_epi8(D) & 0xFFFFFFFFULL) + 1) >> 32) - 1;
 }
