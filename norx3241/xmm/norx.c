@@ -38,6 +38,7 @@ const char * norx_version = "3.0";
 #define NORX_B (NORX_W * 16)     /* permutation width */
 #define NORX_C (NORX_W *  4)     /* capacity */
 #define NORX_R (NORX_B - NORX_C) /* rate */
+#define TWEAK_LOW_LATENCY
 
 #define BYTES(x) (((x) + 7) / 8)
 #define WORDS(x) (((x) + (NORX_W-1)) / NORX_W)
