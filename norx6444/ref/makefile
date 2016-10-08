@@ -21,3 +21,7 @@ genkat:
 	$(CC) $(CFLAGS) -o genkat ../../utils/genkat.c norx.c caesar.c
 	./genkat > ../kat.h
 	rm genkat
+
+
+.PHONY: check debug bench
+
