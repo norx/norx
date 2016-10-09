@@ -14,7 +14,7 @@ bench: ../../utils/bench.c norx.c caesar.c
 
 check: ../../utils/check.c norx.c caesar.c
 	$(CC) $(CFLAGS) -I../ -o check ../../utils/check.c norx.c caesar.c
-	@sde64 -- ./check
+	@./check
 	@rm check
 
 .PHONY: check debug bench
