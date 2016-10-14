@@ -1,10 +1,10 @@
 /*
    NORX reference source code package - reference C implementations
 
-   Written 2014-2015 by:
+   Written 2014-2016 by:
 
         - Samuel Neves <sneves@dei.uc.pt>
-        - Philipp Jovanovic <jovanovic@fim.uni-passau.de>
+        - Philipp Jovanovic <philipp@jovanovic.io>
 
    To the extent possible under law, the author(s) have dedicated all copyright
    and related and neighboring rights to this software to the public domain
