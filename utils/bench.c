@@ -109,9 +109,6 @@ static unsigned long long cpucycles(void)
 #if 1
 #define GHZ 1.4 /* iPad Air */
 #endif
-#if 0
-#define GHZ 1.3 /* iPhone 5s & iPad Mini Retina */
-#endif
 static mach_timebase_info_data_t sTimebaseInfo;
 static unsigned long long cpucycles( void )
 {
