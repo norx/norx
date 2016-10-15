@@ -4,7 +4,7 @@
 #
 
 DEST=crypto_aead
-VER=v2
+VER=v3
 
 if [ -d "$DEST" ]; then rm -rf $DEST; fi
 mkdir -p $DEST
