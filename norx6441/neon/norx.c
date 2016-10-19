@@ -347,7 +347,7 @@ do                                                \
     }                                             \
 } while(0)
 
-#define FINALISE(S)                                 \
+#define FINALISE(S, KEY)                            \
 do                                                  \
 {                                                   \
     INJECT_DOMAIN_CONSTANT(S, FINAL_TAG);           \

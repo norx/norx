@@ -279,14 +279,15 @@ do                                                                          \
     memcpy(OUT, lastblock, INLEN);                                          \
 } while(0)
 
-#define INITIALISE(A, B, C, D, N, K) do {             \
-    A = LOADU(N);                                     \
-    B = LOADU(K);                                     \
-    C = SETV( U8,  U9, U10, U11);                     \
-    D = SETV(U12, U13, U14, U15);                     \
-    D = XOR(D, SETV(NORX_W, NORX_L, NORX_P, NORX_T)); \
-    PERMUTE(A, B, C, D);                              \
-    INJECT_KEY(A, B, C, D, LOADU(K));                 \
+#define INITIALISE(A, B, C, D, N, K) do {                                       \
+    const uint32x4_t C_ = SETV( U8,  U9, U10, U11);                             \
+    const uint32x4_t D_ = SETV(U12^NORX_W, U13^NORX_L, U14^NORX_P, U15^NORX_T); \
+    A = LOADU(N);                                                               \
+    B = LOADU(K);                                                               \
+    C = C_;                                                                     \
+    D = D_;                                                                     \
+    PERMUTE(A, B, C, D);                                                        \
+    INJECT_KEY(A, B, C, D, LOADU(K));                                           \
 } while(0)
 
 #define ABSORB_DATA(A, B, C, D, IN, INLEN, TAG)       \
