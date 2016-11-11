@@ -17,12 +17,5 @@ for DIR in ../norx{3241,3261,6441,6444,6461}; do
   mv $DEST/$BASE $DEST/$BASE$VER
 done;
 
-# activate SUPERCOP support
-if [ `uname` == "Darwin" ]; then
-  find $DEST -type f -exec sed -i "" -e 's/defined(SUPERCOP)/1/g' '{}' \;
-else
-  find $DEST -type f -exec sed -i 's/defined(SUPERCOP)/1/g' '{}' \;
-fi
-
 # pack stuff
 tar -czf $DEST.tar.gz $DEST
